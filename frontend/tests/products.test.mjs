@@ -41,6 +41,15 @@ test('fetches the required URL with the supplied AbortSignal', async (context) =
   assert.deepEqual(await getProducts(controller.signal), response);
 });
 
+test('rejects non-finite, negative and unsafe API prices', () => {
+  for (const price of [1e308, Infinity, NaN, -1, (Number.MAX_SAFE_INTEGER + 1) / 100]) {
+    assert.throws(() => parseProductsResponse({ ...response, products: [{ ...product, price }] }), /unexpected response/);
+  }
+  for (const price of [0, 0.1, 19.99, 2499.99]) {
+    assert.equal(parseProductsResponse({ ...response, products: [{ ...product, price }] }).products[0].price, price);
+  }
+});
+
 test('rejects HTTP failure, invalid JSON, and malformed successful responses', async (context) => {
   const fetchMock = context.mock.method(globalThis, 'fetch', async () => new Response('', { status: 503 }));
   const signal = new AbortController().signal;

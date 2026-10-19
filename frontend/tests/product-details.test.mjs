@@ -81,3 +81,10 @@ test('USD formatting preserves cents, zero prices, and thousands separators', ()
   assert.equal(formatPrice(0), '$0.00');
   assert.equal(formatPrice(1899.99), '$1,899.99');
 });
+
+test('detail validation and formatting reject invalid monetary values', () => {
+  for (const price of [1e308, Infinity, NaN, -1, (Number.MAX_SAFE_INTEGER + 1) / 100]) {
+    assert.throws(() => parseProductDetails({ ...product, price }), /unexpected product details/);
+    assert.throws(() => formatPrice(price), RangeError);
+  }
+});

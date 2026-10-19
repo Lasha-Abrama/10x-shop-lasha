@@ -5,6 +5,8 @@ import type { ProductDetails } from '../api/products';
 import { ProductGallery } from '../components/ProductGallery';
 import { QuantitySelector } from '../components/QuantitySelector';
 import { formatPrice } from '../format';
+import { useCart } from '../cart/CartContext';
+import { cartReducer } from '../cart/cart';
 
 type DetailsState =
   | { status: 'loading' }
@@ -51,6 +53,23 @@ function ProductDetailsRequest({ id }: { id: string | undefined }) {
 }
 
 function ProductDetailsContent({ product }: { product: ProductDetails }) {
+  const { state, dispatch } = useCart();
+  const [quantity, setQuantity] = useState(1);
+  const [feedback, setFeedback] = useState('');
+  const inBag = state.items.find((item) => item.id === product.id)?.quantity ?? 0;
+  const remaining = Math.max(0, product.stock - inBag);
+
+  function addToBag() {
+    const added = Math.min(quantity, remaining);
+    if (added === 0) return;
+    if (cartReducer(state, { type: 'add', product, quantity }) === state) {
+      setFeedback('This selection exceeds safe bag limits. Please choose a smaller quantity.');
+      return;
+    }
+    dispatch({ type: 'add', product, quantity });
+    setFeedback(`${added} ${added === 1 ? 'item' : 'items'} added. ${inBag + added} of this product now in your bag.`);
+  }
+
   const attributes = [
     ['Availability', product.availabilityStatus],
     ['Product code', product.sku],
@@ -71,9 +90,12 @@ function ProductDetailsContent({ product }: { product: ProductDetails }) {
         <p className="mt-6 max-w-prose text-base leading-7 text-muted">{product.description}</p>
         <div className="my-8 border-y border-line py-6">
           <p className="mb-5 text-sm font-medium">{product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}</p>
-          <QuantitySelector stock={product.stock} />
-          <button type="button" disabled className="mt-6 flex min-h-14 w-full cursor-not-allowed items-center justify-between gap-4 rounded-editorial bg-ink px-5 py-4 text-sm text-paper" aria-describedby="bag-availability"><span>Add to Bag</span><span className="text-xs">Coming soon</span></button>
-          <p id="bag-availability" className="mt-3 text-xs leading-5 text-muted">Shopping is not available yet. This page uses sample product data from DummyJSON.</p>
+          <QuantitySelector stock={product.stock} quantity={quantity} onChange={setQuantity} productTitle={product.title} />
+          {inBag > 0 && <p className="mt-3 text-xs text-muted">{inBag} already in your bag.{remaining === 0 && ' Stock limit reached.'}</p>}
+          <button type="button" disabled={remaining === 0} onClick={addToBag} className="primary-link mt-6 min-h-14 w-full disabled:cursor-not-allowed disabled:opacity-50" aria-describedby="bag-availability">{product.stock === 0 ? 'Out of stock' : remaining === 0 ? 'Stock limit reached' : 'Add to Bag'}</button>
+          <p role="status" aria-live="polite" className="mt-3 text-sm leading-6 text-accent">{feedback}</p>
+          {feedback && <Link to="/cart" className="text-link mt-2 inline-flex text-sm">View your bag</Link>}
+          <p id="bag-availability" className="mt-3 text-xs leading-5 text-muted">Sample product data from DummyJSON. Checkout is not available yet.</p>
         </div>
         <h2 className="font-display text-2xl">The details.</h2>
         <dl className="mt-4 divide-y divide-line text-sm">

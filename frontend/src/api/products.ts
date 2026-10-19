@@ -1,3 +1,5 @@
+import { usdToCents } from '../money.ts';
+
 // The fields this storefront uses from the DummyJSON product response.
 export type Product = {
   id: number;
@@ -50,7 +52,7 @@ function isProduct(value: unknown): value is Product & Record<string, unknown> {
   return isNonnegativeInteger(value.id) && value.id > 0
     && isNonemptyString(value.title)
     && isNonemptyString(value.category)
-    && typeof value.price === 'number' && Number.isFinite(value.price) && value.price >= 0
+    && usdToCents(value.price) !== null
     && (value.rating === undefined || (typeof value.rating === 'number'
       && Number.isFinite(value.rating) && value.rating >= 0 && value.rating <= 5))
     && isImageUrl(value.thumbnail);

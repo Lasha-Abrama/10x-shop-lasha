@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router';
+import { useCart } from '../cart/CartContext';
+import { getCartTotals } from '../cart/cart';
 
 const navigation = [
   { label: 'All products', href: '/products' },
@@ -11,6 +13,8 @@ const navigation = [
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const { state } = useCart();
+  const { itemCount } = getCartTotals(state);
 
   return (
     <header className="border-b border-line bg-paper">
@@ -27,11 +31,11 @@ export function Header() {
             <span className="hidden sm:inline">Search</span>
             <span className="soon-label">Soon</span>
           </button>
-          <button type="button" disabled className="future-action" aria-label="Shopping bag — coming soon" title="Shopping bag is coming soon">
+          <Link to="/cart" onClick={() => setMenuOpen(false)} className="nav-link inline-flex min-h-11 items-center gap-1.5 text-sm" aria-label={`Shopping bag, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 7h14l1 14H4L5 7Z" /><path d="M8 8V6a4 4 0 0 1 8 0v2" /></svg>
             <span className="hidden sm:inline">Bag</span>
-            <span className="soon-label">Soon</span>
-          </button>
+            <span className="min-w-4 text-center text-xs tabular-nums" aria-live="polite" aria-atomic="true">{itemCount}</span>
+          </Link>
           <button ref={menuButton} type="button" className="nav-link min-h-11 px-1 text-sm lg:hidden" aria-expanded={menuOpen} aria-controls="mobile-navigation" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? 'Close' : 'Menu'}
           </button>

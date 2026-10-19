@@ -1,12 +1,20 @@
+import { Link, Route, Routes } from 'react-router';
+import { Layout } from './components/Layout';
+import { HomePage } from './pages/HomePage';
+
 export function App() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 text-slate-900">
-      <div className="max-w-lg text-center">
-        <h1 className="text-4xl font-bold tracking-tight">10X Shop</h1>
-        <p className="mt-4 text-lg text-slate-600">
-          A graduation e-commerce project. Coming soon.
-        </p>
-      </div>
-    </main>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<HomePage />} />
+        <Route path="*" element={
+          <section className="page-width py-24">
+            <h1 className="font-display text-5xl">A little off the beaten path.</h1>
+            <p className="mt-5 text-muted">This page doesn’t exist. Let’s take you home.</p>
+            <Link className="text-link mt-8 inline-flex" to="/">Return to 10X Shop</Link>
+          </section>
+        } />
+      </Route>
+    </Routes>
   );
 }

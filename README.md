@@ -1,6 +1,6 @@
 # 10X Shop
 
-10X Shop is a graduation e-commerce project. This repository currently contains only the project foundation: a React placeholder page and a NestJS health endpoint.
+10X Shop is a graduation e-commerce project. It currently contains a frontend design system, a responsive shared storefront layout, a static home-page preview, and a NestJS health endpoint. Product names and prices are illustrative; search and shopping are not available yet.
 
 ## Stack and structure
 
@@ -10,6 +10,8 @@
 - `PLAN.md` lists milestones; `REPORT.md` is a progress report template.
 
 PostgreSQL, Prisma, authentication, Stripe, AI, and product features are not configured.
+
+The storefront uses Tailwind v4 theme tokens in `frontend/src/styles.css`, shared Header/Footer/Layout components, and typed presentation data in `frontend/src/pages/HomePage.tsx`. Fonts and photos are served locally; no external requests are needed to render the preview. DM Sans and Libre Caslon Display are from Google Fonts, with licenses in `frontend/public/fonts/`. Preview photos are from Unsplash: [living room](https://images.unsplash.com/photo-1600210492486-724fe5c67fb0), [ceramics](https://images.unsplash.com/photo-1610701596007-11502861dcfa), [bag](https://images.unsplash.com/photo-1544816155-12df9643f363), and [candle](https://images.unsplash.com/photo-1603006905003-be475563bc59).
 
 ## Local setup
 

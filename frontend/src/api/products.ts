@@ -8,6 +8,19 @@ export type Product = {
   thumbnail: string;
 };
 
+export type ProductDetails = Product & {
+  description: string;
+  images: string[];
+  stock: number;
+  brand?: string;
+  availabilityStatus?: string;
+  sku?: string;
+  shippingInformation?: string;
+  warrantyInformation?: string;
+  returnPolicy?: string;
+  minimumOrderQuantity?: number;
+};
+
 export type ProductsResponse = {
   products: Product[];
   total: number;
@@ -27,7 +40,11 @@ function isNonnegativeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
-function isProduct(value: unknown): value is Product {
+function isImageUrl(value: unknown): value is string {
+  return isNonemptyString(value) && URL.canParse(value) && /^https?:\/\//.test(value);
+}
+
+function isProduct(value: unknown): value is Product & Record<string, unknown> {
   if (!isRecord(value)) return false;
 
   return isNonnegativeInteger(value.id) && value.id > 0
@@ -36,7 +53,7 @@ function isProduct(value: unknown): value is Product {
     && typeof value.price === 'number' && Number.isFinite(value.price) && value.price >= 0
     && (value.rating === undefined || (typeof value.rating === 'number'
       && Number.isFinite(value.rating) && value.rating >= 0 && value.rating <= 5))
-    && isNonemptyString(value.thumbnail) && /^https?:\/\//.test(value.thumbnail);
+    && isImageUrl(value.thumbnail);
 }
 
 export function parseProductsResponse(value: unknown): ProductsResponse {
@@ -54,8 +71,7 @@ export function parseProductsResponse(value: unknown): ProductsResponse {
   return { products: value.products, total: value.total, skip: value.skip, limit: value.limit };
 }
 
-export async function getProducts(signal: AbortSignal): Promise<ProductsResponse> {
-  const response = await fetch('https://dummyjson.com/products?limit=12&skip=0', { signal });
+async function readProductResponse(response: Response, signal: AbortSignal): Promise<unknown> {
   if (!response.ok) {
     throw new Error(`The catalog service is unavailable (HTTP ${response.status}). Please try again.`);
   }
@@ -67,5 +83,45 @@ export async function getProducts(signal: AbortSignal): Promise<ProductsResponse
     if (signal.aborted) throw error;
     throw new Error('The catalog service returned an unreadable response. Please try again.');
   }
-  return parseProductsResponse(data);
+  return data;
+}
+
+export async function getProducts(signal: AbortSignal): Promise<ProductsResponse> {
+  const response = await fetch('https://dummyjson.com/products?limit=12&skip=0', { signal });
+  return parseProductsResponse(await readProductResponse(response, signal));
+}
+
+export function parseProductId(value: string | undefined): number | null {
+  if (!value || !/^[1-9]\d*$/.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) ? id : null;
+}
+
+function isProductDetails(value: unknown): value is ProductDetails {
+  return isProduct(value)
+    && isNonemptyString(value.description)
+    && Array.isArray(value.images) && value.images.every(isImageUrl)
+    && isNonnegativeInteger(value.stock)
+    && ['brand', 'availabilityStatus', 'sku', 'shippingInformation', 'warrantyInformation', 'returnPolicy']
+      .every((key) => value[key] === undefined || isNonemptyString(value[key]))
+    && (value.minimumOrderQuantity === undefined
+      || (isNonnegativeInteger(value.minimumOrderQuantity) && value.minimumOrderQuantity > 0));
+}
+
+export function parseProductDetails(value: unknown): ProductDetails {
+  if (!isProductDetails(value)) {
+    throw new Error('The catalog service returned unexpected product details. Please try again.');
+  }
+
+  return value;
+}
+
+export async function getProductDetails(value: string | undefined, signal: AbortSignal): Promise<ProductDetails | null> {
+  const id = parseProductId(value);
+  if (id === null) return null;
+  const response = await fetch(`https://dummyjson.com/products/${id}`, { signal });
+  if (response.status === 404) return null;
+  const product = parseProductDetails(await readProductResponse(response, signal));
+  if (product.id !== id) throw new Error('The catalog service returned the wrong product. Please try again.');
+  return product;
 }

@@ -2,6 +2,7 @@ import { Link, Route, Routes } from 'react-router';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/HomePage';
 import { ProductsPage } from './pages/ProductsPage';
+import { ProductDetailsPage } from './pages/ProductDetailsPage';
 
 export function App() {
   return (
@@ -9,6 +10,7 @@ export function App() {
       <Route element={<Layout />}>
         <Route index element={<HomePage />} />
         <Route path="products" element={<ProductsPage />} />
+        <Route path="products/:id" element={<ProductDetailsPage />} />
         <Route path="*" element={
           <section className="page-width py-24">
             <h1 className="font-display text-5xl">A little off the beaten path.</h1>

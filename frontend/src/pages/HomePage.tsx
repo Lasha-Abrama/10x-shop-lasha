@@ -1,14 +1,9 @@
+import { Link } from 'react-router';
+import { ProductGrid } from '../components/ProductGrid';
+
 type Collection = {
   name: string;
   description: string;
-  image: string;
-  alt: string;
-};
-
-type PreviewProduct = {
-  name: string;
-  material: string;
-  price: string;
   image: string;
   alt: string;
 };
@@ -17,12 +12,6 @@ const collections: Collection[] = [
   { name: 'Spaces to settle into', description: 'The home collection', image: '/images/living-room.jpg', alt: 'Warm living room with a neutral sofa and natural wood furniture' },
   { name: 'Objects with character', description: 'The tabletop collection', image: '/images/ceramics.jpg', alt: 'A collection of ceramic vessels and cups' },
   { name: 'Everyday companions', description: 'The carry collection', image: '/images/everyday-bag.jpg', alt: 'A simple everyday bag' },
-];
-
-const products: PreviewProduct[] = [
-  { name: 'The ceramic collection', material: 'Earthy tones · Tabletop', price: '$38', image: '/images/ceramics.jpg', alt: 'Ceramic cups and vessels in natural tones' },
-  { name: 'The everyday bag', material: 'Simple form · Everyday carry', price: '$46', image: '/images/everyday-bag.jpg', alt: 'An everyday bag with a simple silhouette' },
-  { name: 'The quiet evening candle', material: 'A warm glow · Home accents', price: '$28', image: '/images/candle.jpg', alt: 'A candle arranged for a quiet evening' },
 ];
 
 function Arrow() {
@@ -37,8 +26,8 @@ export function HomePage() {
           <div className="flex flex-col justify-center px-7 py-12 sm:px-12 sm:py-16 lg:px-16">
             <h1 id="hero-heading" className="max-w-lg font-display text-[clamp(3.5rem,6.5vw,6rem)] leading-[0.98] tracking-[-0.025em]">Less, but<br />more considered.</h1>
             <p className="mt-7 max-w-sm text-base leading-7 text-muted">Objects for your space. Essentials for your day. A fresh perspective on the things you choose to live with.</p>
-            <a className="primary-link mt-9 self-start" href="#collections">Explore the collections <Arrow /></a>
-            <p className="mt-12 text-xs text-muted">The 10X Shop concept collection · Design preview</p>
+            <Link className="primary-link mt-9 self-start" to="/products">Explore all products <Arrow /></Link>
+            <p className="mt-12 text-xs text-muted">The 10X Shop collection · A graduation project</p>
           </div>
           <div className="relative min-h-80 sm:min-h-112 lg:min-h-full">
             <img src="/images/living-room.jpg" alt="A calm, sunlit living space with natural wood and soft neutral furnishings" width="1800" height="1200" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover" />
@@ -54,17 +43,18 @@ export function HomePage() {
       <section id="collections" aria-labelledby="collections-heading" className="page-width scroll-mt-8 pb-20 pt-6 lg:pb-28">
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <h2 id="collections-heading" className="section-title">Find your everyday.</h2>
-          <p className="max-w-xs text-sm leading-6 text-muted">Three ways to bring a little more intention to the ordinary.</p>
+          <p className="max-w-xs text-sm leading-6 text-muted">Three inspirations for everyday living. These mood studies are not shoppable categories.</p>
         </div>
         <div className="grid gap-8 md:grid-cols-3">
           {collections.map((collection) => (
             <article key={collection.name}>
               <img src={collection.image} alt={collection.alt} width="800" height="1000" loading="lazy" className="aspect-[4/3] w-full rounded-editorial bg-sand object-cover" />
               <h3 className="mt-5 font-display text-3xl leading-tight">{collection.name}</h3>
-              <p className="mt-2 text-sm text-muted">{collection.description} · Preview</p>
+              <p className="mt-2 text-sm text-muted">{collection.description} · Inspiration only</p>
             </article>
           ))}
         </div>
+        <Link to="/products" className="text-link mt-7 inline-flex items-center gap-4">Explore all products <Arrow /></Link>
       </section>
 
       <section id="featured" aria-labelledby="featured-heading" className="border-y border-line bg-surface py-16 lg:py-20">
@@ -72,25 +62,11 @@ export function HomePage() {
           <div className="mb-9 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
             <div>
               <h2 id="featured-heading" className="section-title">The selected edit.</h2>
-              <p className="mt-3 text-sm leading-6 text-muted">A few things we’re imagining for the collection.</p>
+              <p className="mt-3 text-sm leading-6 text-muted">A first look at the collection, straight from the catalog.</p>
             </div>
-            <p className="max-w-sm text-xs leading-5 text-muted"><span className="font-semibold text-ink">Static product preview.</span> Illustrative names and prices only. Items cannot be purchased.</p>
+            <Link to="/products" className="text-link inline-flex items-center gap-4 text-sm">View all products <Arrow /></Link>
           </div>
-          <div className="grid gap-x-7 gap-y-10 sm:grid-cols-3">
-            {products.map((product) => (
-              <article key={product.name}>
-                <div className="relative overflow-hidden rounded-editorial bg-sand">
-                  <img src={product.image} alt={product.alt} width="800" height="1000" loading="lazy" className="aspect-[4/5] w-full object-cover" />
-                  <span className="absolute left-4 top-4 bg-paper px-3 py-1.5 text-xs">Preview only</span>
-                </div>
-                <div className="mt-5 flex items-start justify-between gap-4">
-                  <h3 className="text-base font-medium leading-6">{product.name}</h3>
-                  <p className="text-sm leading-6 tabular-nums" aria-label={`Illustrative price ${product.price}`}>{product.price}</p>
-                </div>
-                <p className="mt-1 text-sm leading-6 text-muted">{product.material}</p>
-              </article>
-            ))}
-          </div>
+          <ProductGrid limit={3} />
         </div>
       </section>
 

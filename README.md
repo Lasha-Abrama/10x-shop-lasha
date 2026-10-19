@@ -1,6 +1,6 @@
 # 10X Shop
 
-10X Shop is a graduation e-commerce project. It currently contains a frontend design system, a responsive shared storefront layout, a static home-page preview, and a NestJS health endpoint. Product names and prices are illustrative; search and shopping are not available yet.
+10X Shop is a graduation e-commerce project. It contains a frontend design system, a responsive shared storefront layout, a DummyJSON product catalog at `/products`, live featured products on the homepage, and a NestJS health endpoint. DummyJSON provides sample product data; search and shopping are not available yet.
 
 ## Stack and structure
 
@@ -9,9 +9,11 @@
 - npm workspaces manage both apps with one root `package-lock.json`.
 - `PLAN.md` lists milestones; `REPORT.md` is a progress report template.
 
-PostgreSQL, Prisma, authentication, Stripe, AI, and product features are not configured.
+PostgreSQL, Prisma, authentication, Stripe, AI, and shopping features are not configured.
 
-The storefront uses Tailwind v4 theme tokens in `frontend/src/styles.css`, shared Header/Footer/Layout components, and typed presentation data in `frontend/src/pages/HomePage.tsx`. Fonts and photos are served locally; no external requests are needed to render the preview. DM Sans and Libre Caslon Display are from Google Fonts, with licenses in `frontend/public/fonts/`. Preview photos are from Unsplash: [living room](https://images.unsplash.com/photo-1600210492486-724fe5c67fb0), [ceramics](https://images.unsplash.com/photo-1610701596007-11502861dcfa), [bag](https://images.unsplash.com/photo-1544816155-12df9643f363), and [candle](https://images.unsplash.com/photo-1603006905003-be475563bc59).
+The storefront uses Tailwind v4 theme tokens in `frontend/src/styles.css` and shared Header/Footer/Layout components. `frontend/src/api/products.ts` validates the product fields consumed by the UI from `https://dummyjson.com/products?limit=12&skip=0`; extra API fields are ignored. ProductGrid manages loading, retry, empty states, and request cancellation, and reuses ProductCard on both pages. Prices are displayed in USD. Cards are informational until product details are implemented.
+
+The catalog needs internet access to DummyJSON and its image CDN. Fonts and lifestyle photos are served locally. DM Sans and Libre Caslon Display are from Google Fonts, with licenses in `frontend/public/fonts/`. Lifestyle photos are from Unsplash: [living room](https://images.unsplash.com/photo-1600210492486-724fe5c67fb0), [ceramics](https://images.unsplash.com/photo-1610701596007-11502861dcfa), [bag](https://images.unsplash.com/photo-1544816155-12df9643f363), and [candle](https://images.unsplash.com/photo-1603006905003-be475563bc59). Their source and license evidence is in `frontend/public/images/ASSET-LICENSES.md`. The homepage mood studies are inspiration only, separate from the API-backed products.
 
 ## Local setup
 
@@ -25,7 +27,7 @@ npm run dev
 - Frontend: http://localhost:5173
 - Backend health: http://localhost:3000/health, returning `{"status":"ok"}`
 
-No environment files or external services are needed. Ports 5173 and 3000 must be available. Press Ctrl+C to stop both apps.
+No environment files or locally managed services are needed. The catalog requires internet access. Ports 5173 and 3000 must be available. Press Ctrl+C to stop both apps.
 
 If port 3000 is in use, choose another backend port, for example `PORT=3001 npm run dev` on macOS/Linux. The backend reads `PORT` from the shell; it does not load `.env` files.
 
@@ -39,6 +41,7 @@ Run these from the repository root:
 | `npm run dev:frontend` | Start only Vite |
 | `npm run dev:backend` | Start only NestJS |
 | `npm run typecheck` | Typecheck both apps |
+| `npm test --workspace frontend` | Run catalog API validation and failure tests with Node's built-in test runner |
 | `npm run build` | Typecheck and build both apps |
 | `npm run preview --workspace frontend` | Preview the frontend build locally |
 | `npm start --workspace backend` | Run the compiled backend |

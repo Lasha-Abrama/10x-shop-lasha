@@ -1,12 +1,14 @@
 import { Link, Route, Routes } from 'react-router';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/HomePage';
+import { ProductsPage } from './pages/ProductsPage';
 
 export function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<HomePage />} />
+        <Route path="products" element={<ProductsPage />} />
         <Route path="*" element={
           <section className="page-width py-24">
             <h1 className="font-display text-5xl">A little off the beaten path.</h1>

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router';
 
 const navigation = [
+  { label: 'All products', href: '/products' },
   { label: 'Collections', href: '/#collections' },
   { label: 'The selected edit', href: '/#featured' },
   { label: 'Our perspective', href: '/#perspective' },

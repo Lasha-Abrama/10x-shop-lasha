@@ -9,7 +9,7 @@
 - npm workspaces manage both apps with one root `package-lock.json`.
 - `PLAN.md` lists milestones; `REPORT.md` is a progress report template.
 
-The backend database foundation contains a `User` model only; authentication endpoints, Stripe, AI, and checkout are not implemented.
+The backend contains the `User` model and registration, login, and current-user authentication endpoints. Frontend authentication, Stripe, AI, and checkout are not implemented.
 
 The storefront uses Tailwind v4 theme tokens in `frontend/src/styles.css` and shared Header/Footer/Layout components. `frontend/src/api/products.ts` validates the fields consumed by the UI from the DummyJSON list and single-product endpoints; extra API fields are ignored. ProductGrid loads the first 12 products and reuses ProductCard on both catalog and home pages. Product cards link to details with an image gallery, stock-bounded quantity selection, and optional supplier information. Both fetch lifecycles support loading, retry, and request cancellation. Invalid IDs and missing products have a not-found state. Prices are displayed in USD.
 
@@ -31,7 +31,7 @@ npm run dev:frontend
 - Frontend: http://localhost:5173
 - Backend health: http://localhost:3000/health, returning `{"status":"ok"}`
 
-The frontend works independently and requires internet access for the catalog. Configure the backend database below before using `npm run dev` to start both apps. Ports 5173 and 3000 must be available. Press Ctrl+C to stop the apps.
+The frontend works independently and requires internet access for the catalog. Configure the backend database and authentication settings below before using `npm run dev` to start both apps. Ports 5173 and 3000 must be available. Press Ctrl+C to stop the apps.
 
 If port 3000 is in use, choose another backend port, for example `PORT=3001 npm run dev` on macOS/Linux. Backend npm scripts load `backend/.env` using Node's built-in environment-file support; existing shell variables take precedence.
 
@@ -63,7 +63,33 @@ npm run dev:backend
 
 `migrate status` reports pending migrations before deployment. `migrate deploy` applies migration files without a shadow database or a reset. For future schema changes on a dedicated development database/Neon branch, use `npm run prisma:migrate:dev --workspace backend -- --name descriptive_name`; it may need shadow-database permissions. Never accept a reset prompt for an existing database. Prefer a separate development branch when testing migrations against existing data.
 
-`User` has a UUID primary key, unique email, required `passwordHash`, `Role` enum (`USER` by default or `ADMIN`), and creation/update timestamps. UUIDs and `updatedAt` are managed by Prisma. This step creates no users, password-hashing flow, authentication endpoints, or public database access.
+`User` has a UUID primary key, unique email, required `passwordHash`, `Role` enum (`USER` by default or `ADMIN`), and creation/update timestamps. UUIDs and `updatedAt` are managed by Prisma. STEP 009A uses this schema unchanged; it requires no new migration and creates no seed accounts.
+
+## Backend authentication
+
+In the ignored `backend/.env`, add `JWT_SECRET` and `FRONTEND_ORIGINS` from `backend/.env.example` without changing the database URLs. Generate a 32-byte random signing secret locally with the command in the example file, then paste its 64 hexadecimal characters into `JWT_SECRET`. Do not share the output, commit it, or use the example placeholder. Set `FRONTEND_ORIGINS="http://localhost:5173"`; multiple explicit local origins can be comma-separated, for example to include `http://127.0.0.1:5173`. Paths, wildcard origins, and non-local hosts are rejected. Missing or invalid auth configuration stops startup before connecting to the database. Existing shell variables override the local file.
+
+| Endpoint | Request | Result |
+| --- | --- | --- |
+| `POST /auth/register` | JSON `email` and `password` only | `202` with the same acknowledgement for a new or duplicate email |
+| `POST /auth/login` | JSON `email` and `password` only | `200` with `accessToken`, `tokenType: "Bearer"`, `expiresIn: 900`, and public `user` |
+| `GET /auth/me` | `Authorization: Bearer <accessToken>` | Current public user, or `401` for invalid tokens/deleted users |
+
+Emails are trimmed and lowercased consistently. Passwords must contain 15–128 characters; whitespace is preserved, and passwords are never truncated. Unknown fields, including `role`, are rejected with `400`. Registration always assigns `USER`, hashes with Argon2id (19 MiB memory, two iterations, one parallel lane, random salt), and handles unique-email races without disclosing whether an account exists. Its response contains no user data or token; sign in separately. Login returns the same `401` message for unknown email and incorrect password, and performs Argon2 verification in both cases to reduce timing differences.
+
+JWTs use HS256, a 15-minute expiry, fixed issuer/audience, and only user ID/role plus standard timing/issuer claims. The guard checks the signature, algorithm, claims, and expiry, then reloads the user from Prisma on every protected request. Database roles take precedence over token role claims. Public user responses contain only `id`, `email`, `role`, `createdAt`, and `updatedAt`. Authentication responses use `Cache-Control: no-store`; credentials, hashes, tokens, and connection strings are not logged. Database failures return sanitized service-unavailable messages.
+
+Registration is limited to five requests per minute per IP; login to ten. Invalid requests also count, and forwarded IP headers are not trusted. The default throttler stores counters in memory for this single-process graduation backend; restarts clear them. Before running multiple backend instances, use a shared rate-limit store and explicitly configure any trusted proxy. CORS allows only configured local origins, supports the Authorization header, and does not enable browser credentials/cookies. CORS is a browser policy, not a substitute for token checks. Use HTTPS when moving beyond local development. There are no refresh tokens, cookies, OAuth, verification/reset emails, or admin-management endpoints.
+
+### Test without touching Neon
+
+```sh
+npm test --workspace backend
+```
+
+This builds the backend and runs Node's built-in tests with `@nestjs/testing`, real HTTP requests on temporary loopback ports, real Argon2id/JWT operations, and an in-memory Prisma mock. The test server does not load `.env`, connect to Neon, or create real accounts; Prisma generation during the build needs no database access. Tests cover validation, normalization, hashing, duplicate races, public fields, JWT rejection/expiry, deleted users, rate limits, and CORS. No Jest or HTTP testing library is required.
+
+For manual checks, configure the local environment, run `npm run dev:backend`, and use a local API client. Keep passwords and bearer tokens out of command history, screenshots, and logs. Calling registration against this server writes a real account to the configured Neon database; do so only when intended. Automated verification in STEP 009A does not perform that operation.
 
 ## Commands
 
@@ -76,6 +102,7 @@ Run these from the repository root:
 | `npm run dev:backend` | Start only NestJS |
 | `npm run typecheck` | Typecheck both apps |
 | `npm test --workspace frontend` | Run catalog/detail API tests and cart reducer/storage tests with Node's built-in test runner |
+| `npm test --workspace backend` | Build and run isolated authentication HTTP tests with mocked Prisma |
 | `npm run build` | Typecheck and build both apps |
 | `npm run preview --workspace frontend` | Preview the frontend build locally |
 | `npm start --workspace backend` | Run the compiled backend |

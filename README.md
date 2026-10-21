@@ -9,7 +9,7 @@
 - npm workspaces manage both apps with one root `package-lock.json`.
 - `PLAN.md` lists milestones; `REPORT.md` is a progress report template.
 
-The backend contains the `User` model and registration, login, and current-user authentication endpoints. The storefront has login, registration, and account pages. Stripe, AI, and checkout are not implemented.
+The backend contains authentication and an authenticated order API backed by Prisma. The storefront has login, registration, and account pages. Frontend checkout, payments, and AI are not implemented.
 
 The storefront uses Tailwind v4 theme tokens in `frontend/src/styles.css` and shared Header/Footer/Layout components. `frontend/src/api/products.ts` validates the fields consumed by the UI from the DummyJSON list and single-product endpoints; extra API fields are ignored. ProductGrid loads the first 12 products and reuses ProductCard on both catalog and home pages. Product cards link to details with an image gallery, stock-bounded quantity selection, and optional supplier information. Both fetch lifecycles support loading, retry, and request cancellation. Invalid IDs and missing products have a not-found state. Prices are displayed in USD.
 
@@ -101,7 +101,48 @@ To choose the backend URL, copy `frontend/.env.example` to ignored `frontend/.en
 
 **Intentional limitation:** there are no refresh tokens or persisted sign-in sessions. A full refresh, new tab, or closing the page returns to guest state. Nothing auth-related is written to localStorage, sessionStorage, or cookies. The bag still uses its separate localStorage entry. Internal storefront links use React Router so ordinary navigation preserves the in-memory session. `/account` shows safe public details for a confirmed user and a login prompt for guests; the frontend prompt is not a replacement for backend authorization.
 
-Run `npm test --workspace frontend` for the existing tests plus auth response handling, neutral registration acknowledgements, validation, cancellation, invalid/expired tokens, logout, and guest-state protection. These tests mock fetch and create no live accounts. STEP 009B browser verification also uses an isolated mock API for success/error/session flows. Successful authentication against a live Neon account remains untested until an account is explicitly approved for that purpose.
+Run `npm test --workspace frontend` for the existing tests plus auth response handling, neutral registration acknowledgements, validation, cancellation, invalid/expired tokens, logout, and guest-state protection. These tests mock fetch and create no live accounts. STEP 009B browser verification used an isolated mock API. STEP 009C verified the real registration/login/current-user/account/logout/refresh flow against Neon using exactly one explicitly approved disposable account on 21 October 2026.
+
+## Backend orders (STEP 010A)
+
+This is an API foundation only; the storefront bag has no checkout integration yet. `Order` belongs to `User`; `OrderItem` belongs to an order, with UUID primary keys, a DummyJSON product ID, title/price snapshots, quantity, integer-cent line totals, and timestamps. Orders include currency `USD`, integer-cent total, creation/update timestamps, and only `PENDING_PAYMENT` status. Snapshots preserve what was ordered even if the external catalog changes or disappears. There is no second product catalog in PostgreSQL. Foreign keys restrict deletion, and `(orderId, productId)` is unique.
+
+**Migration status:** `backend/prisma/migrations/20261021000000_add_orders/migration.sql` was applied to the configured Neon development database on 21 October 2026 after explicit approval. Read-only checks confirmed the order enum/tables, supporting indexes, foreign keys, and checks; the initial User migration, User columns/indexes, and the existing test user remained unchanged. Both order tables were empty after deployment. On another database, inspect migration status and existing schema, obtain approval, then use `npm run prisma:migrate:deploy --workspace backend`. Never use `db push`, a reset, or ad hoc schema changes. The SQL includes checks for USD, positive product IDs, quantities 1–100, nonnegative cents, and line-total consistency; Prisma does not express these custom checks in its schema.
+
+All order endpoints require `Authorization: Bearer <accessToken>` and use the existing JWT guard, including its current-user lookup. Missing/invalid/expired tokens and deleted users receive `401`. Responses use `Cache-Control: no-store`.
+
+| Endpoint | Contract |
+| --- | --- |
+| `POST /orders` | JSON `items` only; 1–20 distinct products, each with integer `productId` (1–2,147,483,647) and integer `quantity` (1–100). Returns `201` with the saved order. Limited to 10 requests/minute/IP in the existing in-memory throttler. |
+| `GET /orders` | Returns an array of the current user's latest 50 orders, newest first, with UUID descending as a tie-breaker. No pagination parameters yet. |
+| `GET /orders/:id` | UUID path parameter; returns only an order owned by the current user. Missing and other users' orders both return `404`; malformed UUIDs return `400`. |
+
+Safe example request body (use a signed-in local API client; keep bearer tokens out of logs/history):
+
+```json
+{
+  "items": [
+    { "productId": 1, "quantity": 2 },
+    { "productId": 2, "quantity": 1 }
+  ]
+}
+```
+
+Unknown fields at either level are rejected with `400`, including `userId`, role, title, stock, price, currency, status, and totals. Duplicate products are rejected rather than merged. User identity comes exclusively from the guard. Public order responses contain `id`, `status`, `currency`, `totalCents`, `createdAt`, `updatedAt`, and `items`; each item exposes only `id`, `productId`, `title`, `quantity`, `unitPriceCents`, and `lineTotalCents`. No user relation, email, or auth fields are returned.
+
+The backend fetches every product independently from the [DummyJSON single-product endpoint](https://dummyjson.com/docs/products) using native fetch, a fixed HTTPS host, no redirects/cache, and one 10-second deadline for the bounded batch. It validates matching ID, nonempty bounded title, finite nonnegative price, safe integer stock, and availability status before any database write. Prices round to the nearest USD cent as in the storefront. Unit/line/aggregate cents must be nonnegative safe integers no greater than **2,147,483,647** ($21,474,836.47), matching PostgreSQL `Int`; overflow is rejected, never capped. Zero prices are valid. The total is the sum of line totals only: no discounts, taxes, shipping charges, or payment processing.
+
+Failure policy:
+
+- Invalid input, duplicate products, or line/aggregate monetary overflow: `400`, no order.
+- Missing products, `Out of Stock`/zero stock, or quantity exceeding current stock: `409`, no order.
+- Upstream HTTP/network/timeout failures or malformed catalog data (including invalid prices): sanitized `503`, no order.
+- Persistence failure: sanitized `503`; a Prisma transaction creates the order and all nested items atomically, rolling everything back on failure.
+- Changed prices: the server's freshly fetched base price is authoritative, even if the browser's bag price is stale. The API does not accept a client price or perform a price-comparison/confirmation step. A future checkout UI must show these authoritative totals before any payment step.
+
+DummyJSON stock is demonstration data. It is checked but never reserved or decremented, so concurrent orders can reference the same stock. Supplier `minimumOrderQuantity` is not enforced; this demo follows the existing bag's 1-unit minimum. `PENDING_PAYMENT` does not mean paid, fulfilled, shipped, or inventory-reserved. Repeated successful POSTs create separate orders; idempotent checkout/retry handling is not implemented, so a client must not automatically retry an uncertain successful submission.
+
+`npm test --workspace backend` runs focused order HTTP tests with the real guard/DTOs and mocked Prisma/catalog, covering validation, monetary bounds, catalog failures, transaction failure/rollback, snapshots, bounded listing, ownership, and safe responses. It creates no live orders. Database constraint definitions were checked read-only after migration deployment. Insertion/rollback behavior has not been exercised against PostgreSQL; mocks do not prove database rollback behavior. Use an explicitly approved isolated database for those checks without creating live orders.
 
 ## Commands
 
@@ -114,7 +155,7 @@ Run these from the repository root:
 | `npm run dev:backend` | Start only NestJS |
 | `npm run typecheck` | Typecheck both apps |
 | `npm test --workspace frontend` | Run catalog/detail API, cart reducer/storage, and frontend auth tests with Node's built-in test runner |
-| `npm test --workspace backend` | Build and run isolated authentication HTTP tests with mocked Prisma |
+| `npm test --workspace backend` | Build and run isolated authentication/order HTTP tests with mocked Prisma and catalog |
 | `npm run build` | Typecheck and build both apps |
 | `npm run preview --workspace frontend` | Preview the frontend build locally |
 | `npm start --workspace backend` | Run the compiled backend |

@@ -20,5 +20,6 @@ import { JWT_AUDIENCE, JWT_ISSUER, JWT_TTL_SECONDS, readAuthConfig } from './aut
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtAuthGuard],
+  exports: [JwtAuthGuard, JwtModule, AuthService, ThrottlerModule],
 })
 export class AuthModule {}

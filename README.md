@@ -5,11 +5,11 @@
 ## Stack and structure
 
 - `frontend/`: Vite, React 19, strict TypeScript, Tailwind CSS v4, and React Router.
-- `backend/`: NestJS and strict TypeScript.
+- `backend/`: NestJS, strict TypeScript, Prisma ORM 7.10.1, and Neon PostgreSQL.
 - npm workspaces manage both apps with one root `package-lock.json`.
 - `PLAN.md` lists milestones; `REPORT.md` is a progress report template.
 
-PostgreSQL, Prisma, authentication, Stripe, AI, and checkout are not configured.
+The backend database foundation contains a `User` model only; authentication endpoints, Stripe, AI, and checkout are not implemented.
 
 The storefront uses Tailwind v4 theme tokens in `frontend/src/styles.css` and shared Header/Footer/Layout components. `frontend/src/api/products.ts` validates the fields consumed by the UI from the DummyJSON list and single-product endpoints; extra API fields are ignored. ProductGrid loads the first 12 products and reuses ProductCard on both catalog and home pages. Product cards link to details with an image gallery, stock-bounded quantity selection, and optional supplier information. Both fetch lifecycles support loading, retry, and request cancellation. Invalid IDs and missing products have a not-found state. Prices are displayed in USD.
 
@@ -25,15 +25,45 @@ Install Node.js 24 or newer and npm 11 or newer. From the repository root:
 
 ```sh
 npm ci
-npm run dev
+npm run dev:frontend
 ```
 
 - Frontend: http://localhost:5173
 - Backend health: http://localhost:3000/health, returning `{"status":"ok"}`
 
-No environment files or locally managed services are needed. The catalog requires internet access. Ports 5173 and 3000 must be available. Press Ctrl+C to stop both apps.
+The frontend works independently and requires internet access for the catalog. Configure the backend database below before using `npm run dev` to start both apps. Ports 5173 and 3000 must be available. Press Ctrl+C to stop the apps.
 
-If port 3000 is in use, choose another backend port, for example `PORT=3001 npm run dev` on macOS/Linux. The backend reads `PORT` from the shell; it does not load `.env` files.
+If port 3000 is in use, choose another backend port, for example `PORT=3001 npm run dev` on macOS/Linux. Backend npm scripts load `backend/.env` using Node's built-in environment-file support; existing shell variables take precedence.
+
+## Backend database setup
+
+Use the existing Neon project and database. In your local editor, create `backend/.env` from `backend/.env.example` if it does not already exist. Never overwrite an existing environment file or paste credentials into chat, source files, or Git.
+
+1. Open the Neon console's **Connect** dialog for the intended branch and database. With connection pooling enabled, copy the complete PostgreSQL URL into `DATABASE_URL="..."` in `backend/.env`.
+2. Disable pooling in the same dialog and put that URL into `DIRECT_URL="..."` in the same file. Both URLs must point to the same branch/database. Keep Neon's SSL options; do not disable certificate verification. The runtime URL normally has `-pooler` in its hostname; the migration URL does not.
+3. Generate and validate the client (these commands do not connect to the database):
+
+   ```sh
+   npm run prisma:validate --workspace backend
+   npm run prisma:generate --workspace backend
+   ```
+
+The generated TypeScript client lives in ignored `backend/src/generated/prisma/`. Backend typecheck, build, and development scripts generate it automatically, including on a clean checkout. Prisma's `prisma-client` generator uses CommonJS to match Nest's existing build. Prisma 7 keeps connection URLs out of `schema.prisma`: `backend/prisma.config.ts` loads the backend-local environment file and uses only `DIRECT_URL` for CLI operations. Runtime `PrismaService` uses `@prisma/adapter-pg` with `DATABASE_URL`, a small connection pool, and a connection timeout. It verifies connectivity with `SELECT 1` at startup and disconnects on shutdown. The health endpoint remains `GET /health`.
+
+The initial migration `20261020000000_init_users` was applied to the configured Neon database on 20 October 2026. Direct and pooled connectivity, migration history/checksum, User columns, Role values, and indexes were verified with read-only queries. On a different database, configure both local URLs, confirm connectivity, and inspect the existing schema and migration history before applying the migration. If existing tables or conflicting schema objects are present, stop and reconcile the history first; do not reset, drop, or overwrite them.
+
+For an inspected compatible database, the normal tracked-migration workflow is:
+
+```sh
+npm run prisma:status --workspace backend
+npm run prisma:migrate:deploy --workspace backend
+npm run prisma:status --workspace backend
+npm run dev:backend
+```
+
+`migrate status` reports pending migrations before deployment. `migrate deploy` applies migration files without a shadow database or a reset. For future schema changes on a dedicated development database/Neon branch, use `npm run prisma:migrate:dev --workspace backend -- --name descriptive_name`; it may need shadow-database permissions. Never accept a reset prompt for an existing database. Prefer a separate development branch when testing migrations against existing data.
+
+`User` has a UUID primary key, unique email, required `passwordHash`, `Role` enum (`USER` by default or `ADMIN`), and creation/update timestamps. UUIDs and `updatedAt` are managed by Prisma. This step creates no users, password-hashing flow, authentication endpoints, or public database access.
 
 ## Commands
 
@@ -49,6 +79,12 @@ Run these from the repository root:
 | `npm run build` | Typecheck and build both apps |
 | `npm run preview --workspace frontend` | Preview the frontend build locally |
 | `npm start --workspace backend` | Run the compiled backend |
+| `npm run prisma:generate --workspace backend` | Generate the ignored Prisma client without connecting |
+| `npm run prisma:validate --workspace backend` | Validate the Prisma schema |
+| `npm run prisma:status --workspace backend` | Inspect migration status using the direct URL |
+| `npm run prisma:migrate:deploy --workspace backend` | Apply reviewed tracked migrations |
+| `npm run prisma:migrate:dev --workspace backend -- --name descriptive_name` | Create future migrations on a dedicated development database |
+| `npm run prisma:studio --workspace backend` | Open local database inspection UI; keep it private |
 
 Builds are written to `frontend/dist/` and `backend/dist/`. Build before running the preview or compiled backend. For frontend production hosting, serve `frontend/dist/` and configure an SPA fallback to `index.html` for browser routing.
 

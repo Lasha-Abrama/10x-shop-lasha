@@ -9,6 +9,8 @@ coverage/
 .env.*
 *.env
 *.env.*
+!backend/.env.example
+backend/src/generated/prisma/
 *.pem
 *.key
 .DS_Store

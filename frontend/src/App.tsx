@@ -4,6 +4,8 @@ import { HomePage } from './pages/HomePage';
 import { ProductsPage } from './pages/ProductsPage';
 import { ProductDetailsPage } from './pages/ProductDetailsPage';
 import { CartPage } from './pages/CartPage';
+import { AuthPage } from './pages/AuthPage';
+import { AccountPage } from './pages/AccountPage';
 
 export function App() {
   return (
@@ -13,6 +15,9 @@ export function App() {
         <Route path="products" element={<ProductsPage />} />
         <Route path="products/:id" element={<ProductDetailsPage />} />
         <Route path="cart" element={<CartPage />} />
+        <Route path="login" element={<AuthPage key="login" mode="login" />} />
+        <Route path="register" element={<AuthPage key="register" mode="register" />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="*" element={
           <section className="page-width py-24">
             <h1 className="font-display text-5xl">A little off the beaten path.</h1>

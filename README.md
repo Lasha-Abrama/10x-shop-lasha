@@ -9,7 +9,7 @@
 - npm workspaces manage both apps with one root `package-lock.json`.
 - `PLAN.md` lists milestones; `REPORT.md` is a progress report template.
 
-The backend contains the `User` model and registration, login, and current-user authentication endpoints. Frontend authentication, Stripe, AI, and checkout are not implemented.
+The backend contains the `User` model and registration, login, and current-user authentication endpoints. The storefront has login, registration, and account pages. Stripe, AI, and checkout are not implemented.
 
 The storefront uses Tailwind v4 theme tokens in `frontend/src/styles.css` and shared Header/Footer/Layout components. `frontend/src/api/products.ts` validates the fields consumed by the UI from the DummyJSON list and single-product endpoints; extra API fields are ignored. ProductGrid loads the first 12 products and reuses ProductCard on both catalog and home pages. Product cards link to details with an image gallery, stock-bounded quantity selection, and optional supplier information. Both fetch lifecycles support loading, retry, and request cancellation. Invalid IDs and missing products have a not-found state. Prices are displayed in USD.
 
@@ -91,6 +91,18 @@ This builds the backend and runs Node's built-in tests with `@nestjs/testing`, r
 
 For manual checks, configure the local environment, run `npm run dev:backend`, and use a local API client. Keep passwords and bearer tokens out of command history, screenshots, and logs. Calling registration against this server writes a real account to the configured Neon database; do so only when intended. Automated verification in STEP 009A does not perform that operation.
 
+## Frontend authentication
+
+`/login` and `/register` use controlled React forms, basic client-side email checks, and the backend's 15–128-character password policy (counting Unicode characters, preserving spaces). The server remains authoritative for email validation. Registration displays the backend's neutral acknowledgement for both new and existing addresses and guides the user to login; it never claims that a new account was definitely created.
+
+To choose the backend URL, copy `frontend/.env.example` to ignored `frontend/.env.local` and set `VITE_API_BASE_URL="http://localhost:3000"` (also the default when unset). Restart Vite after changing it, or rebuild for production. This is a public API base URL only: Vite embeds `VITE_*` values in browser code. Never put `JWT_SECRET`, Neon URLs, passwords, or other secrets in frontend environment variables. Keep the browser's frontend origin in the backend's `FRONTEND_ORIGINS` list. The frontend and backend must both be running for real authentication requests.
+
+`frontend/src/api/auth.ts` validates the actual login, registration, and public-user response contracts. Login calls `/auth/me` with a bearer header before populating `AuthContext`; unconfirmed or rejected tokens never become authenticated state. The context uses a small reducer in `frontend/src/auth/`, owns the short-lived token privately in React memory, and exposes the current user, status, login/logout, and registration actions. Logout and session expiry remove the token and user. Requests time out, cancel on navigation/unmount, and cannot restore a stale login after logout. Pending submissions disable their controls and block duplicate clicks; HTTP, validation, rate-limit, network, and invalid-response failures use safe messages.
+
+**Intentional limitation:** there are no refresh tokens or persisted sign-in sessions. A full refresh, new tab, or closing the page returns to guest state. Nothing auth-related is written to localStorage, sessionStorage, or cookies. The bag still uses its separate localStorage entry. Internal storefront links use React Router so ordinary navigation preserves the in-memory session. `/account` shows safe public details for a confirmed user and a login prompt for guests; the frontend prompt is not a replacement for backend authorization.
+
+Run `npm test --workspace frontend` for the existing tests plus auth response handling, neutral registration acknowledgements, validation, cancellation, invalid/expired tokens, logout, and guest-state protection. These tests mock fetch and create no live accounts. STEP 009B browser verification also uses an isolated mock API for success/error/session flows. Successful authentication against a live Neon account remains untested until an account is explicitly approved for that purpose.
+
 ## Commands
 
 Run these from the repository root:
@@ -101,7 +113,7 @@ Run these from the repository root:
 | `npm run dev:frontend` | Start only Vite |
 | `npm run dev:backend` | Start only NestJS |
 | `npm run typecheck` | Typecheck both apps |
-| `npm test --workspace frontend` | Run catalog/detail API tests and cart reducer/storage tests with Node's built-in test runner |
+| `npm test --workspace frontend` | Run catalog/detail API, cart reducer/storage, and frontend auth tests with Node's built-in test runner |
 | `npm test --workspace backend` | Build and run isolated authentication HTTP tests with mocked Prisma |
 | `npm run build` | Typecheck and build both apps |
 | `npm run preview --workspace frontend` | Preview the frontend build locally |

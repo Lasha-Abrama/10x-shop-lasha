@@ -10,9 +10,9 @@ export function Footer() {
         </div>
         <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-8 gap-y-4 text-sm">
           <Link className="nav-link" to="/products">All products</Link>
-          <a className="nav-link" href="/#collections">Collections</a>
-          <a className="nav-link" href="/#featured">The selected edit</a>
-          <a className="nav-link" href="/#perspective">Our perspective</a>
+          <Link className="nav-link" to="/#collections">Collections</Link>
+          <Link className="nav-link" to="/#featured">The selected edit</Link>
+          <Link className="nav-link" to="/#perspective">Our perspective</Link>
         </nav>
       </div>
       <div className="page-width flex flex-col justify-between gap-3 border-t border-line py-6 text-xs leading-5 text-muted sm:flex-row">

@@ -3,12 +3,13 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import { App } from './App';
 import { CartProvider } from './cart/CartContext';
+import { AuthProvider } from './auth/AuthContext';
 import './styles.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <CartProvider><App /></CartProvider>
+      <AuthProvider><CartProvider><App /></CartProvider></AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 );

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useCart } from '../cart/CartContext';
 import { getCartTotals } from '../cart/cart';
+import { useAuth } from '../auth/AuthContext';
 
 const navigation = [
   { label: 'All products', href: '/products' },
@@ -22,10 +23,11 @@ export function Header() {
         <Link to="/" aria-label="10X Shop home" className="wordmark" onClick={() => setMenuOpen(false)}>
           10X<span className="ml-2 font-normal">SHOP</span><span className="text-accent">.</span>
         </Link>
-        <nav aria-label="Main navigation" className="hidden items-center gap-8 text-sm lg:flex">
-          {navigation.map((item) => <a key={item.href} className="nav-link" href={item.href}>{item.label}</a>)}
+        <nav aria-label="Main navigation" className="hidden items-center gap-6 text-sm xl:flex">
+          {navigation.map((item) => <Link key={item.href} className="nav-link" to={item.href}>{item.label}</Link>)}
         </nav>
         <div className="flex items-center gap-4 sm:gap-6">
+          <div className="hidden md:block"><AccountNavigation onNavigate={() => setMenuOpen(false)} /></div>
           <button type="button" disabled className="future-action" aria-label="Search — coming soon" title="Search is coming soon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>
             <span className="hidden sm:inline">Search</span>
@@ -36,19 +38,33 @@ export function Header() {
             <span className="hidden sm:inline">Bag</span>
             <span className="min-w-4 text-center text-xs tabular-nums" aria-live="polite" aria-atomic="true">{itemCount}</span>
           </Link>
-          <button ref={menuButton} type="button" className="nav-link min-h-11 px-1 text-sm lg:hidden" aria-expanded={menuOpen} aria-controls="mobile-navigation" onClick={() => setMenuOpen(!menuOpen)}>
+          <button ref={menuButton} type="button" className="nav-link min-h-11 px-1 text-sm xl:hidden" aria-expanded={menuOpen} aria-controls="mobile-navigation" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? 'Close' : 'Menu'}
           </button>
         </div>
-        <nav id="mobile-navigation" aria-label="Mobile navigation" hidden={!menuOpen} className="w-full border-t border-line pt-3 lg:hidden" onKeyDown={(event) => {
+        <nav id="mobile-navigation" aria-label="Mobile navigation" hidden={!menuOpen} className="w-full border-t border-line pt-3 xl:hidden" onKeyDown={(event) => {
           if (event.key === 'Escape') {
             setMenuOpen(false);
             menuButton.current?.focus();
           }
         }}>
-          {navigation.map((item) => <a key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="nav-link block py-3 text-base">{item.label}</a>)}
+          {navigation.map((item) => <Link key={item.href} to={item.href} onClick={() => setMenuOpen(false)} className="nav-link block py-3 text-base">{item.label}</Link>)}
+          <div className="mt-3 border-t border-line py-3 md:hidden"><AccountNavigation onNavigate={() => setMenuOpen(false)} /></div>
         </nav>
       </div>
     </header>
   );
+}
+
+function AccountNavigation({ onNavigate }: { onNavigate: () => void }) {
+  const { user, logout } = useAuth();
+  return <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+    {user ? <>
+      <Link to="/account" onClick={onNavigate} className="nav-link inline-flex min-h-11 max-w-44 items-center" aria-label={`My account, ${user.email}`}><span className="truncate">{user.email}</span></Link>
+      <button type="button" className="nav-link min-h-11" onClick={() => { logout(); onNavigate(); }}>Logout</button>
+    </> : <>
+      <Link to="/login" onClick={onNavigate} className="nav-link inline-flex min-h-11 items-center">Login</Link>
+      <Link to="/register" onClick={onNavigate} className="nav-link inline-flex min-h-11 items-center">Create account</Link>
+    </>}
+  </div>;
 }

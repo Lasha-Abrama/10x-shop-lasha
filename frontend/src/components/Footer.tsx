@@ -17,7 +17,7 @@ export function Footer() {
       </div>
       <div className="page-width flex flex-col justify-between gap-3 border-t border-line py-6 text-xs leading-5 text-muted sm:flex-row">
         <p>© {new Date().getFullYear()} 10X Shop · Graduation project</p>
-        <p>Sample catalog from DummyJSON. Checkout is not available.</p>
+        <p>Sample catalog from DummyJSON. Payments are not available.</p>
       </div>
     </footer>
   );

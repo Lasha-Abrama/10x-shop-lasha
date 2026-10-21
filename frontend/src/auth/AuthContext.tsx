@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useReducer, useRef } from 'react';
+import { createContext, useCallback, useContext, useEffect, useReducer, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { authenticate, registerAccount } from '../api/auth';
 import type { AuthUser, Credentials } from '../api/auth';
@@ -9,6 +9,8 @@ type AuthContextValue = {
   user: AuthUser | null;
   status: AuthState['status'];
   notice: string | null;
+  accessToken: string | null;
+  invalidateSession: () => void;
   login: (credentials: Credentials, signal: AbortSignal) => Promise<void>;
   register: (credentials: Credentials, signal: AbortSignal) => Promise<string>;
   logout: () => void;
@@ -50,16 +52,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function logout() {
+  const endSession = useCallback((notice: string) => {
     active.current?.abort();
     active.current = null;
-    dispatch({ type: 'guest', notice: 'You have signed out.' });
-  }
+    dispatch({ type: 'guest', notice });
+  }, []);
+  const logout = useCallback(() => endSession('You have signed out.'), [endSession]);
+  const invalidateSession = useCallback(() => endSession('Your session has ended. Please sign in again.'), [endSession]);
 
   return <AuthContext.Provider value={{
     user: canAccessAccount(state) ? state.session?.user ?? null : null,
     status: state.status === 'authenticated' && !canAccessAccount(state) ? 'guest' : state.status, notice: state.notice,
-    login, logout, register: registerAccount,
+    accessToken: canAccessAccount(state) ? state.session?.token ?? null : null,
+    login, logout, invalidateSession, register: registerAccount,
   }}>{children}</AuthContext.Provider>;
 }
 

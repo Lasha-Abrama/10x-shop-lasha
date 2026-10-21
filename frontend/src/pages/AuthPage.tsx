@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { AuthApiError, validateCredentials } from '../api/auth';
 import type { Credentials } from '../api/auth';
+import { authPath, safeReturnTo } from '../auth/returnTo';
 
 const inputClass = 'mt-2 min-h-13 w-full rounded-editorial border border-muted bg-paper px-4 py-3 text-base caret-accent hover:border-ink disabled:opacity-60';
 
 export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const { user, login, register } = useAuth();
   const navigate = useNavigate();
+  const [search] = useSearchParams();
+  const returnTo = safeReturnTo(search.get('returnTo'));
   const [credentials, setCredentials] = useState<Credentials>({ email: '', password: '' });
   const [errors, setErrors] = useState<Partial<Record<keyof Credentials, string>>>({});
   const [failure, setFailure] = useState('');
@@ -40,7 +43,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     try {
       if (isLogin) {
         await login(credentials, controller.signal);
-        if (!controller.signal.aborted) navigate('/account', { replace: true });
+        if (!controller.signal.aborted) navigate(returnTo, { replace: true });
       } else {
         const message = await register(credentials, controller.signal);
         if (!controller.signal.aborted) setSuccess(message);
@@ -54,7 +57,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     }
   }
 
-  if (user) return <Navigate to="/account" replace />;
+  if (user) return <Navigate to={returnTo} replace />;
 
   return (
     <section className="page-width grid gap-12 py-12 sm:py-16 lg:min-h-160 lg:grid-cols-[1fr_26rem] lg:gap-24 lg:py-24 xl:grid-cols-[1fr_30rem]">
@@ -68,10 +71,10 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
         {success ? <div role="status" className="bg-surface p-6 sm:p-8">
           <h2 className="font-display text-3xl">Request received.</h2>
           <p className="mt-5 text-sm leading-7 text-muted">{success}</p>
-          <Link to="/login" className="primary-link mt-7">Continue to login</Link>
+          <Link to={authPath('login', returnTo)} className="primary-link mt-7">Continue to login</Link>
         </div> : <>
           <h2 className="font-display text-3xl">{isLogin ? 'Login' : 'Create account'}</h2>
-          <p className="mt-3 text-sm leading-6 text-muted">{isLogin ? 'New here? ' : 'Already have an account? '}<Link className="nav-link underline" to={isLogin ? '/register' : '/login'}>{isLogin ? 'Create an account' : 'Login'}</Link></p>
+          <p className="mt-3 text-sm leading-6 text-muted">{isLogin ? 'New here? ' : 'Already have an account? '}<Link className="nav-link underline" to={authPath(isLogin ? 'register' : 'login', returnTo)}>{isLogin ? 'Create an account' : 'Login'}</Link></p>
           <form noValidate onSubmit={submit} aria-busy={pending} className="mt-8">
             <fieldset disabled={pending} className="space-y-6">
               <legend className="sr-only">{isLogin ? 'Login credentials' : 'Registration details'}</legend>

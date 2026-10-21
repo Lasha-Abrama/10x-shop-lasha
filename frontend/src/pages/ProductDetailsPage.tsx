@@ -95,7 +95,7 @@ function ProductDetailsContent({ product }: { product: ProductDetails }) {
           <button type="button" disabled={remaining === 0} onClick={addToBag} className="primary-link mt-6 min-h-14 w-full disabled:cursor-not-allowed disabled:opacity-50" aria-describedby="bag-availability">{product.stock === 0 ? 'Out of stock' : remaining === 0 ? 'Stock limit reached' : 'Add to Bag'}</button>
           <p role="status" aria-live="polite" className="mt-3 text-sm leading-6 text-accent">{feedback}</p>
           {feedback && <Link to="/cart" className="text-link mt-2 inline-flex text-sm">View your bag</Link>}
-          <p id="bag-availability" className="mt-3 text-xs leading-5 text-muted">Sample product data from DummyJSON. Checkout is not available yet.</p>
+          <p id="bag-availability" className="mt-3 text-xs leading-5 text-muted">Sample product data from DummyJSON. Payments are not available.</p>
         </div>
         <h2 className="font-display text-2xl">The details.</h2>
         <dl className="mt-4 divide-y divide-line text-sm">

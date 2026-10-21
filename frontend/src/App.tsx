@@ -6,6 +6,8 @@ import { ProductDetailsPage } from './pages/ProductDetailsPage';
 import { CartPage } from './pages/CartPage';
 import { AuthPage } from './pages/AuthPage';
 import { AccountPage } from './pages/AccountPage';
+import { CheckoutPage } from './pages/CheckoutPage';
+import { OrdersPage } from './pages/OrdersPage';
 
 export function App() {
   return (
@@ -18,6 +20,9 @@ export function App() {
         <Route path="login" element={<AuthPage key="login" mode="login" />} />
         <Route path="register" element={<AuthPage key="register" mode="register" />} />
         <Route path="account" element={<AccountPage />} />
+        <Route path="checkout" element={<CheckoutPage />} />
+        <Route path="orders" element={<OrdersPage />} />
+        <Route path="orders/:id" element={<OrdersPage />} />
         <Route path="*" element={
           <section className="page-width py-24">
             <h1 className="font-display text-5xl">A little off the beaten path.</h1>

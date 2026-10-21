@@ -19,7 +19,7 @@ export function AccountPage() {
         <div className="grid gap-2 py-5 sm:grid-cols-[8rem_1fr]"><dt className="text-muted">Account role</dt><dd>{user.role === 'ADMIN' ? 'Admin' : 'User'}</dd></div>
         <div className="grid gap-2 py-5 sm:grid-cols-[8rem_1fr]"><dt className="text-muted">Member since</dt><dd>{new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date(user.createdAt))}</dd></div>
       </dl>
-      <button type="button" onClick={logout} className="text-link mt-6 text-sm">Logout</button>
+      <div className="mt-6 flex flex-wrap items-center gap-6"><Link to="/orders" className="primary-link">View your orders</Link><button type="button" onClick={logout} className="text-link text-sm">Logout</button></div>
     </div>
   </section>;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getProducts } from '../api/products';
-import type { ProductsResponse } from '../api/products';
+import type { Product, ProductsResponse } from '../api/products';
 import { ProductCard } from './ProductCard';
 
 type CatalogState =
@@ -8,7 +8,8 @@ type CatalogState =
   | { status: 'error'; message: string }
   | { status: 'success'; data: ProductsResponse };
 
-export function ProductGrid({ limit = 12 }: { limit?: 3 | 12 }) {
+export function FeaturedProducts() {
+  const limit = 3;
   const [state, setState] = useState<CatalogState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
 
@@ -57,9 +58,13 @@ export function ProductGrid({ limit = 12 }: { limit?: 3 | 12 }) {
   return (
     <>
       <p role="status" className="mb-7 text-xs text-muted">Showing {products.length} of {state.data.total} sample products · Prices in USD</p>
-      <div className={`grid gap-x-7 gap-y-10 ${limit === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
-        {products.map((product) => <ProductCard key={product.id} product={product} />)}
-      </div>
+      <ProductGrid products={products} featured />
     </>
   );
+}
+
+export function ProductGrid({ products, featured = false }: { products: Product[]; featured?: boolean }) {
+  return <div className={`grid gap-x-7 gap-y-10 ${featured ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
+    {products.map((product) => <ProductCard key={product.id} product={product} />)}
+  </div>;
 }

@@ -28,11 +28,10 @@ export function Header() {
         </nav>
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="hidden md:block"><AccountNavigation onNavigate={() => setMenuOpen(false)} /></div>
-          <button type="button" disabled className="future-action" aria-label="Search — coming soon" title="Search is coming soon">
+          <Link to="/products#catalog-search" onClick={() => setMenuOpen(false)} className="nav-link inline-flex min-h-11 items-center gap-1.5 text-sm" aria-label="Search products">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>
             <span className="hidden sm:inline">Search</span>
-            <span className="soon-label">Soon</span>
-          </button>
+          </Link>
           <Link to="/cart" onClick={() => setMenuOpen(false)} className="nav-link inline-flex min-h-11 items-center gap-1.5 text-sm" aria-label={`Shopping bag, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 7h14l1 14H4L5 7Z" /><path d="M8 8V6a4 4 0 0 1 8 0v2" /></svg>
             <span className="hidden sm:inline">Bag</span>

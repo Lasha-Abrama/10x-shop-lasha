@@ -65,7 +65,7 @@ export function parseProductsResponse(value: unknown): ProductsResponse {
     || !isNonnegativeInteger(value.skip)
     || !isNonnegativeInteger(value.limit)
     || value.products.length > value.limit
-    || value.skip + value.products.length > value.total
+    || (value.products.length > 0 && value.skip + value.products.length > value.total)
     || new Set(value.products.map((product) => product.id)).size !== value.products.length) {
     throw new Error('The catalog service returned an unexpected response. Please try again.');
   }
@@ -73,7 +73,7 @@ export function parseProductsResponse(value: unknown): ProductsResponse {
   return { products: value.products, total: value.total, skip: value.skip, limit: value.limit };
 }
 
-async function readProductResponse(response: Response, signal: AbortSignal): Promise<unknown> {
+export async function readProductResponse(response: Response, signal: AbortSignal): Promise<unknown> {
   if (!response.ok) {
     throw new Error(`The catalog service is unavailable (HTTP ${response.status}). Please try again.`);
   }

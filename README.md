@@ -1,6 +1,6 @@
 # 10X Shop
 
-10X Shop is a graduation e-commerce project. It contains a frontend design system, a responsive shared storefront layout, a DummyJSON product catalog at `/products`, product details at `/products/:id`, a persistent shopping bag at `/cart`, live featured products on the homepage, and a NestJS health endpoint. DummyJSON provides sample product data. Authenticated demonstration checkout and order history are available; search, shipping, and payments are not implemented.
+10X Shop is a graduation e-commerce project. It contains a frontend design system, a responsive shared storefront layout, a DummyJSON product catalog at `/products`, product details at `/products/:id`, a persistent shopping bag at `/cart`, live featured products on the homepage, and a NestJS health endpoint. DummyJSON provides sample product data. Authenticated demonstration checkout and order history are available; shipping and payments are not implemented.
 
 ## Stack and structure
 
@@ -11,7 +11,7 @@
 
 The backend contains authentication and an authenticated order API backed by Prisma. The storefront has login, registration, and account pages. The frontend supports demonstration checkout and order history. Payments and AI are not implemented.
 
-The storefront uses Tailwind v4 theme tokens in `frontend/src/styles.css` and shared Header/Footer/Layout components. `frontend/src/api/products.ts` validates the fields consumed by the UI from the DummyJSON list and single-product endpoints; extra API fields are ignored. ProductGrid loads the first 12 products and reuses ProductCard on both catalog and home pages. Product cards link to details with an image gallery, stock-bounded quantity selection, and optional supplier information. Both fetch lifecycles support loading, retry, and request cancellation. Invalid IDs and missing products have a not-found state. Prices are displayed in USD.
+The storefront uses Tailwind v4 theme tokens in `frontend/src/styles.css` and shared Header/Footer/Layout components. `frontend/src/api/products.ts` validates the fields consumed by the UI from the DummyJSON list and single-product endpoints; extra API fields are ignored. ProductGrid reuses ProductCard on both catalog and home pages; the homepage shows three featured products. Product cards link to details with an image gallery, stock-bounded quantity selection, and optional supplier information. Both fetch lifecycles support loading, retry, and request cancellation. Invalid IDs and missing products have a not-found state. Prices are displayed in USD.
 
 The bag uses React Context and a pure reducer in `frontend/src/cart/`. Add to Bag merges duplicate products and caps quantities at the supplied stock. The shared quantity selector is controlled by its caller. Totals are calculated in cents. `localStorage` key `10x-shop.cart.v1` stores `{ version: 1, items: [...] }`, with only product ID, title, unit price, thumbnail, stock, and quantity. Missing, malformed, or unsupported data resets to an empty bag; storage failures keep the in-memory bag usable and show a notice. No sensitive data is stored. Prices and stock are snapshots, refreshed when that product is added again; they are not live inventory guarantees. Cross-tab synchronization and checkout rules such as supplier minimum orders are not implemented. Checkout records an authenticated demonstration order without collecting payment.
 
@@ -181,3 +181,9 @@ Run these from the repository root:
 Builds are written to `frontend/dist/` and `backend/dist/`. Build before running the preview or compiled backend. For frontend production hosting, serve `frontend/dist/` and configure an SPA fallback to `index.html` for browser routing.
 
 Use `npm install` when intentionally changing dependencies and commit the updated lockfile with those changes. Keep secrets and `.env` files out of version control.
+
+### Catalog discovery (STEP 011A)
+
+`/products` stores search (`q`, up to 100 characters), category slug (`category`), sort (`price-asc`, `price-desc`, `rating-desc`), and positive page number (`page`) in React Router search parameters. Defaults are all products, catalog order, page 1. Invalid parameters reset safely; pages beyond the result set redirect to the last page. Search updates after 300ms using history replacement; category, sorting, and pagination support back/forward navigation. Changing a filter resets the page.
+
+Categories come from DummyJSON. Search, category-only, and unfiltered requests use server sorting and `limit=12`/`skip`. [DummyJSON](https://dummyjson.com/docs/products) does not combine search and category: category parameters on search and search parameters on category are ignored. For both filters together, we request **all** search matches (`limit=0`), verify the complete response, filter by category, then paginate locally. Server sorting occurs before filtering, so it applies to the entire matching set. This small demonstration catalog makes that tradeoff reasonable; a large catalog would need a backend supporting combined queries. Requests are aborted on navigation and outdated responses are ignored. No catalog dependencies were added.

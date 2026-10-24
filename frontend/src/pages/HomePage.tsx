@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ProductGrid } from '../components/ProductGrid';
+import { FeaturedProducts } from '../components/ProductGrid';
 
 type Collection = {
   name: string;
@@ -66,7 +66,7 @@ export function HomePage() {
             </div>
             <Link to="/products" className="text-link inline-flex items-center gap-4 text-sm">View all products <Arrow /></Link>
           </div>
-          <ProductGrid limit={3} />
+          <FeaturedProducts />
         </div>
       </section>
 

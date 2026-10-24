@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { getProducts } from '../api/products';
 import type { Product, ProductsResponse } from '../api/products';
 import { ProductCard } from './ProductCard';
@@ -63,8 +63,9 @@ export function FeaturedProducts() {
   );
 }
 
-export function ProductGrid({ products, featured = false }: { products: Product[]; featured?: boolean }) {
+// Search drafts rerender the catalog while its current product array stays unchanged.
+export const ProductGrid = memo(function ProductGrid({ products, featured = false }: { products: Product[]; featured?: boolean }) {
   return <div className={`grid gap-x-7 gap-y-10 ${featured ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
     {products.map((product) => <ProductCard key={product.id} product={product} />)}
   </div>;
-}
+});

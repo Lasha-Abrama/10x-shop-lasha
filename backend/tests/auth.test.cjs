@@ -17,9 +17,9 @@ const testSecret = 'a'.repeat(64);
 const origin = 'http://localhost:5173';
 const credentials = { email: 'shopper@example.com', password: 'correct horse battery staple' };
 
-async function fixture(context) {
+async function fixture(context, frontendOrigin = origin) {
   process.env.JWT_SECRET = testSecret;
-  process.env.FRONTEND_ORIGINS = origin;
+  process.env.FRONTEND_ORIGINS = frontendOrigin;
   const users = new Map();
   const calls = { create: [], find: [] };
   const failure = { create: false, find: false };
@@ -74,11 +74,22 @@ test('configuration fails closed for missing/weak secrets and invalid frontend o
   for (const env of [{}, { JWT_SECRET: 'short', FRONTEND_ORIGINS: origin },
     { JWT_SECRET: testSecret }, { JWT_SECRET: testSecret, FRONTEND_ORIGINS: '*' },
     { JWT_SECRET: testSecret, FRONTEND_ORIGINS: 'http://localhost:5173/path' },
-    { JWT_SECRET: testSecret, FRONTEND_ORIGINS: 'https://untrusted.example.com' }]) {
+    { JWT_SECRET: testSecret, FRONTEND_ORIGINS: 'http://shop.example.com' }]) {
     assert.throws(() => readAuthConfig(env), /JWT_SECRET|FRONTEND_ORIGINS/);
   }
   assert.deepEqual(readAuthConfig({ JWT_SECRET: testSecret, FRONTEND_ORIGINS: `${origin}, http://127.0.0.1:5173` }).origins,
     [origin, 'http://127.0.0.1:5173']);
+});
+
+test('origin configuration accepts explicit HTTPS hosts and rejects unsafe or insecure production values', () => {
+  const hosted = 'https://10x-shop.example.com';
+  assert.deepEqual(readAuthConfig({ JWT_SECRET: testSecret, FRONTEND_ORIGINS: hosted, NODE_ENV: 'production' }).origins, [hosted]);
+  assert.deepEqual(readAuthConfig({ JWT_SECRET: testSecret, FRONTEND_ORIGINS: `${hosted}, ${origin}` }).origins, [hosted, origin]);
+  for (const value of ['', '*', 'null', 'https://*.vercel.app', 'https://user:pass@example.com',
+    `${hosted}/`, `${hosted}/path`, `${hosted}?q=1`, `${hosted}#hash`, `${hosted},`,
+    'http://shop.example.com', 'ftp://shop.example.com', origin, 'http://127.0.0.1:5173', 'http://[::1]:5173']) {
+    assert.throws(() => readAuthConfig({ JWT_SECRET: testSecret, FRONTEND_ORIGINS: value, NODE_ENV: 'production' }), /FRONTEND_ORIGINS/);
+  }
 });
 
 test('compiled server refuses startup with missing JWT configuration before database access', () => {
@@ -267,5 +278,24 @@ test('CORS permits the configured frontend, withholds other origins and enables 
     Origin: origin, 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'authorization,content-type',
   } });
   assert.equal(preflight.status, 204);
+  assert.match(preflight.headers.get('access-control-allow-headers'), /Authorization/);
+});
+
+test('public HTTPS CORS allows only the configured origin, including bearer preflight', async (context) => {
+  const hosted = 'https://10x-shop.example.com';
+  const api = await fixture(context, hosted);
+  const allowed = await api.request('/health', { headers: { Origin: hosted } });
+  assert.equal(allowed.status, 200);
+  assert.equal(allowed.headers.get('access-control-allow-origin'), hosted);
+  assert.equal(allowed.headers.get('access-control-allow-credentials'), null);
+  for (const other of ['https://preview.example.com', `${hosted}.attacker.example`, 'http://10x-shop.example.com', 'null']) {
+    const response = await api.request('/health', { headers: { Origin: other } });
+    assert.equal(response.headers.get('access-control-allow-origin'), null);
+  }
+  const preflight = await api.request('/orders', { method: 'OPTIONS', headers: {
+    Origin: hosted, 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'authorization,content-type',
+  } });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get('access-control-allow-origin'), hosted);
   assert.match(preflight.headers.get('access-control-allow-headers'), /Authorization/);
 });

@@ -1,6 +1,6 @@
 # Requirements traceability
 
-Snapshot: **24 October 2026**, STEP 014C, before deployment. Sources inspected: **10X-Shop-Graduation-Project-PRD.docx**, version 1.1, and **დანართი A.docx (Annex A)** in the accessible workspace. Neither is committed here. English descriptions summarize named sections, not invented requirements. Lecturer approval of the backend extension is confirmed by the student; no written approval artifact is in the repository.
+Snapshot: **24 October 2026**, STEP 015A, before deployment. Sources inspected: **10X-Shop-Graduation-Project-PRD.docx**, version 1.1, and **დანართი A.docx (Annex A)** in the accessible workspace. Neither is committed here. English descriptions summarize named sections, not invented requirements. Lecturer approval of the backend extension is confirmed by the student; no written approval artifact is in the repository.
 
 **Status:** COMPLETE = named implementation/evidence exists; PARTIAL = specified details remain; MISSING = absent; NOT VERIFIED = inadequate current verification. Complete code does not imply production/cross-browser sign-off. Classification follows the PRD and explicit Annex module levels; detailed examples are not automatically mandatory architectures.
 
@@ -27,7 +27,7 @@ Snapshot: **24 October 2026**, STEP 014C, before deployment. Sources inspected: 
 | O1: deployed Lighthouse report (CORE evidence; FULL target scores) | MISSING | No reports in repository | Capture genuine deployed baseline; no invented before/after scores. |
 | O3 / PRD 19, 21: responsive full flow, Chrome + Firefox | NOT VERIFIED | Earlier targeted checks and mock fixtures | Complete all-page/device/browser matrix and keyboard/contrast review; no COMPATIBILITY report yet. |
 | D1–D3 / PRD 2, 25: plan/report/English README/real history | PARTIAL | [PLAN](PLAN.md), [REPORT](REPORT.md), [README](README.md); original plan `f81658d` | Current docs await review; planned hours unrecorded; live link/final metrics missing. |
-| D2 / PRD 24: public repository/live deploy/direct-route refresh | NOT VERIFIED | Configured GitHub origin and 14 local commits | Verify public visibility; deploy frontend/backend, fix public-origin validation/SPA routing, record live URL. |
+| D2 / PRD 24: public repository/live deploy/direct-route refresh | NOT VERIFIED | Configured GitHub origin and 14 local commits | Verify public visibility; review [deployment preparation](DEPLOYMENT.md), configure exact HTTPS origins and isolated database, deploy both hosts, test SPA refresh/CORS, record live URL. |
 | PRD 28: final checks/submission by 6 November, 23:59 Georgia time | MISSING | [remaining plan](PLAN.md) | Owner must finish QA and submit through required form. |
 
 ## Selected FULL work and deferred extensions

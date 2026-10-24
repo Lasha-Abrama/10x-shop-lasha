@@ -30,12 +30,14 @@ The original PLAN was committed with the foundation in `f81658d` on 19 October. 
 
 Steps 009C/010C were separately authorized manual verification sessions, not invented feature commits. This table does not imply fresh live-flow verification or a current database record count.
 
+STEP 015A configuration and local verification are complete: see [DEPLOYMENT.md](DEPLOYMENT.md). Public URLs, cloud builds, migration target, proxy behavior and database isolation still need review/verification. No deployment or live database operations were performed.
+
 ## Remaining milestones and definition of done
 
 | Priority / step | Work | Definition of done | Size / dependency |
 | --- | --- | --- | --- |
 | P0 / CORE detail review | Resolve literal Annex differences in REQUIREMENTS: remaining route/copy/active-link variations | Scoped corrections or explicit lecturer acceptance reviewed; no unexplained complete claims | Small; before final sign-off |
-| P0 / 015 | Deployment preparation/hosting | Public-origin validation corrected/tested; HTTPS frontend/API and private secrets configured; reviewed migration status; SPA deep-link refresh works; live URL recorded | Medium; code review/hosting choices |
+| P0 / 015 | STEP 015A configuration prepared; hosting still pending | Public-origin validation corrected/tested; HTTPS frontend/API and private secrets configured; reviewed migration status; SPA deep-link refresh works; live URL recorded | Medium; code review/hosting choices |
 | P0 / 016 | Production QA/evidence | All-page/device/browser matrix, keyboard/error/empty checks, authorized demo flow and genuine Lighthouse evidence recorded; failures resolved | Medium; requires deployment |
 | P0 / documentation closeout | Update REPORT/REQUIREMENTS/README | Actual live links, test/bundle/Git metrics and limitations current; owner review | Small; after QA |
 | P0 / submission | Final review/delivery/defense preparation | Repository visibility/live access verified, checks pass, required form submitted before deadline | Small; owner action |
@@ -46,7 +48,7 @@ Sizes are relative estimates, not hours already spent. Historical hours were not
 ## Working schedule
 
 - **24 October:** review STEP 014B and identify small CORE corrections.
-- **25–27 October:** reviewed corrections and deployment, including the origin-validation blocker. Postpone optional work if hosting slips.
+- **25–27 October:** reviewed corrections and deployment, including public-origin configuration and database isolation. Postpone optional work if hosting slips.
 - **28–30 October:** production QA, Chrome/Firefox/responsive checks, Lighthouse baseline and genuine after-change measurement if applicable; update documents.
 - **31 October:** stabilize release and practice explaining state, effects, types, validation, money, auth and order trust boundaries.
 - **1–4 November:** reserve primarily for theory preparation; only critical fixes and short defense walkthroughs.
@@ -59,7 +61,7 @@ This is a forward plan, not a claim these activities happened already.
 
 | Risk | Response |
 | --- | --- |
-| Public frontend origins rejected | Small explicit-origin validation fix in STEP 015; keep CORS restricted and test rejection cases. |
+| Public frontend origins rejected | Exact HTTPS origins now supported/tested in STEP 015A; configure and verify the deployed allowlist. |
 | DummyJSON/CDN outage or incomplete results | Retain error/retry/cancellation handling; use mocks for automated success tests. No offline fallback is claimed. |
 | Lost order response and duplicate submission | No automatic retry; inspect history. Disclose lack of server idempotency. |
 | Wrong database target/destructive recovery | Verify target/history and SQL; require approval for live schema/data writes; never reset existing data. |

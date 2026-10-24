@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "workspaces": ["frontend", "backend"],
-  "engines": { "node": ">=24", "npm": ">=11" },
+  "engines": { "node": "24.x", "npm": ">=11" },
   "scripts": {
     "dev": "concurrently --kill-others --names frontend,backend \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "npm run dev --workspace frontend",

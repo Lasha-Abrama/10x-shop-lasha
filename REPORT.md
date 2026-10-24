@@ -92,7 +92,7 @@ Run the frontend locally and inspect Console and Network while loading/searching
 
 ## Limitations and deployment status
 
-No public deployment is verified. Backend configuration accepts only loopback frontend origins; public-origin support needs a small reviewed code correction before hosting. Use backend-only secrets, reviewed Neon migrations, explicit HTTPS origins and frontend SPA rewrites. Publish live links only after testing them.
+No public deployment is verified. STEP 015A prepares exact HTTPS frontend origins (HTTP loopback only outside production), explicit public port binding and Vercel SPA rewrites; deployed behavior remains unverified. See [DEPLOYMENT.md](DEPLOYMENT.md) for hosting commands, isolation/migration review and rate-limit/cold-start limitations. Use backend-only secrets, reviewed Neon migrations, explicit HTTPS origins and frontend SPA rewrites. Publish live links only after testing them.
 
 Other limits: per-process in-memory rate limiting, memory-only sessions, no idempotency key, latest-50 order history without paging, no stock reservation, no contact/address persistence and dependence on DummyJSON/CDN. Combined filters load all search matches. Bag money uses a safe-integer bound; the backend applies the tighter PostgreSQL bound and can reject an oversized selection. Supplier minimum quantities, cross-tab cart synchronization, taxes, payments and shipping are not implemented.
 

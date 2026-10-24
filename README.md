@@ -40,7 +40,7 @@ Routes: `/` is the editorial homepage; `/products` is the catalog; `/products/:i
 
 ## Local setup
 
-Use **Node.js 24+ and npm 11+**. From the repository root:
+Use **Node.js 24.x and npm 11+**. From the repository root:
 
 ```sh
 npm ci
@@ -143,7 +143,7 @@ The class Error Boundary uses `getDerivedStateFromError` and `componentDidCatch`
 
 ## Deployment and remaining work
 
-Deployment has **not** been performed. Before hosting, fix/test the local-only origin restriction in [auth.config.ts](backend/src/auth/auth.config.ts): it rejects public frontend domains. Then configure HTTPS frontend/API origins, backend-only secrets, a reviewed Neon target and SPA fallback routing. Frontend output is `frontend/dist/`; NestJS runs `backend/dist/main.js` after build. No deployment commands or migrations run in this documentation milestone.
+Deployment has **not** been performed. STEP 015A prepares explicit HTTPS origin validation, Node 24.x selection, a public backend bind address and Vercel SPA rewrites. Follow [DEPLOYMENT.md](DEPLOYMENT.md) for Vercel/Render settings, environment names, isolated Neon setup, approved migrations, health checks and safe release verification. No hosting configuration or live database operation has been performed. Frontend output is `frontend/dist/`; NestJS runs `backend/dist/main.js` after build.
 
 After deployment, verify direct/refresh routes, CORS, auth/logout, the complete demo flow, accessibility and supported browsers; record genuine Lighthouse evidence and update live links, metrics and the checklist. Do not claim submission readiness until those checks and remaining Annex details are resolved.
 

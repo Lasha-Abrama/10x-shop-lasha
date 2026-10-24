@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import type { Product } from '../api/products';
 import { formatPrice } from '../format';
+import { CardBagButton } from './CardBagButton';
 
 export function ProductCard({ product }: { product: Product }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -23,6 +24,7 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
         {product.rating !== undefined && <p className="mt-2 text-xs text-muted" aria-label={`Rated ${product.rating} out of 5`}>Rating {product.rating.toFixed(1)} / 5</p>}
       </Link>
+      <CardBagButton productId={product.id} title={product.title} />
     </article>
   );
 }

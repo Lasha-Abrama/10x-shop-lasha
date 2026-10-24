@@ -78,11 +78,11 @@ async function run() {
 
   let titleReads = 0;
   const products: Product[] = [{ id: 1, get title() { titleReads += 1; return 'Memo fixture'; }, category: 'beauty', price: 1, thumbnail: '/images/ceramics.jpg' }];
-  render(<MemoryRouter><ProductGrid products={products} /><p>Draft one</p></MemoryRouter>);
+  render(<MemoryRouter><CartProvider><ProductGrid products={products} /><p>Draft one</p></CartProvider></MemoryRouter>);
   const readsAfterMount = titleReads;
-  render(<MemoryRouter><ProductGrid products={products} /><p>Draft two</p></MemoryRouter>);
+  render(<MemoryRouter><CartProvider><ProductGrid products={products} /><p>Draft two</p></CartProvider></MemoryRouter>);
   check(titleReads === readsAfterMount, 'Unchanged product cards skip a parent draft rerender');
-  render(<MemoryRouter><ProductGrid products={[{ ...products[0], title: 'Updated product' }]} /></MemoryRouter>);
+  render(<MemoryRouter><CartProvider><ProductGrid products={[{ ...products[0], title: 'Updated product' }]} /></CartProvider></MemoryRouter>);
   check(Boolean(container?.textContent?.includes('Updated product')), 'Changed product data still updates the grid');
 
   render(<section className="page-width py-16"><h1 className="section-title">Reliability checks passed.</h1><p role="status" className="mt-6">{passed.length} browser assertions passed. No API writes were made.</p><ul className="mt-6 list-disc space-y-2 pl-5">{passed.map((message) => <li key={message}>{message}</li>)}</ul></section>);

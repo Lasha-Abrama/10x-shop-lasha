@@ -1,8 +1,9 @@
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 
 export function AccountPage() {
   const { user, status, logout } = useAuth();
+  const navigate = useNavigate();
   if (!user) return <section className="page-width min-h-112 py-16 sm:py-24">
     <h1 className="section-title">{status === 'authenticating' ? 'A moment, please.' : 'Your account awaits.'}</h1>
     {status === 'authenticating' ? <p role="status" className="mt-6 text-muted">Confirming your account…</p> : <>
@@ -19,7 +20,7 @@ export function AccountPage() {
         <div className="grid gap-2 py-5 sm:grid-cols-[8rem_1fr]"><dt className="text-muted">Account role</dt><dd>{user.role === 'ADMIN' ? 'Admin' : 'User'}</dd></div>
         <div className="grid gap-2 py-5 sm:grid-cols-[8rem_1fr]"><dt className="text-muted">Member since</dt><dd>{new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date(user.createdAt))}</dd></div>
       </dl>
-      <div className="mt-6 flex flex-wrap items-center gap-6"><Link to="/orders" className="primary-link">View your orders</Link><button type="button" onClick={logout} className="text-link text-sm">Logout</button></div>
+      <div className="mt-6 flex flex-wrap items-center gap-6"><Link to="/orders" className="primary-link">View your orders</Link><button type="button" onClick={() => { logout(); void navigate('/products'); }} className="text-link text-sm">Logout</button></div>
     </div>
   </section>;
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { useCart } from '../cart/CartContext';
 import { getCartTotals, getItemSubtotal } from '../cart/cart';
 import type { CartItem } from '../cart/cart';
@@ -10,6 +10,9 @@ export function CartPage() {
   const { state, dispatch } = useCart();
   const { itemCount, subtotal } = getCartTotals(state);
   const [feedback, setFeedback] = useState('');
+  const { state: routeState }: { state: unknown } = useLocation();
+  const emptyCheckout = typeof routeState === 'object' && routeState !== null
+    && 'emptyCheckout' in routeState && routeState.emptyCheckout === true;
 
   return (
     <section aria-labelledby="cart-heading" className="page-width pb-20 pt-10 lg:pb-28 lg:pt-16">
@@ -18,7 +21,7 @@ export function CartPage() {
         <h1 id="cart-heading" className="section-title">Your bag.</h1>
         <p className="text-sm text-muted">{itemCount} {itemCount === 1 ? 'item' : 'items'}</p>
       </div>
-      <p role="status" aria-live="polite" className="mb-5 text-sm text-muted">{feedback}</p>
+      <p role="status" aria-live="polite" className="mb-5 text-sm text-muted">{feedback || (emptyCheckout && state.items.length === 0 ? 'Add a product to your bag before checking out.' : '')}</p>
       {state.items.length === 0 ? (
         <div className="py-12 sm:py-20">
           <h2 className="font-display text-4xl sm:text-5xl">Room for something good.</h2>

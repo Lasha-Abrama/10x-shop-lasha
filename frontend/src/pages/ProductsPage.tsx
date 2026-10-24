@@ -66,7 +66,7 @@ export function ProductsPage() {
   useEffect(() => {
     if (draft.trim() === query.q) return;
     return scheduleCatalogSearch(() => setParams(catalogParams({ ...query, q: draft.trim(), page: 1 }), { replace: true }));
-  }, [draft, canonical, location.key, setParams]);
+  }, [draft, query, location.key, setParams]);
   useEffect(() => {
     const controller = new AbortController();
     getCategories(controller.signal).then((data) => {

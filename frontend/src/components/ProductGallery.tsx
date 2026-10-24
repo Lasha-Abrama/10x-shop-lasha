@@ -25,7 +25,7 @@ export function ProductGallery({ title, images, thumbnail }: ProductGalleryProps
           <button key={`${photo}-${index}`} ref={(element) => { buttons.current[index] = element; }} type="button" aria-label={`View image ${index + 1} of ${photos.length} for ${title}`} aria-pressed={selected === index}
             className={`h-20 w-20 overflow-hidden rounded-editorial border bg-surface p-2 transition-colors hover:border-accent ${selected === index ? 'border-ink' : 'border-line'}`}
             onClick={() => selectImage(index)} onKeyDown={(event) => {
-              let next = index;
+              let next: number;
               if (event.key === 'ArrowRight') next = (index + 1) % photos.length;
               else if (event.key === 'ArrowLeft') next = (index - 1 + photos.length) % photos.length;
               else if (event.key === 'Home') next = 0;

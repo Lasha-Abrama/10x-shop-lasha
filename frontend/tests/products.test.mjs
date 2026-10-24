@@ -31,6 +31,13 @@ test('rejects malformed products and inconsistent pagination instead of displayi
   }
 });
 
+test('rejects HTTP image strings that have a scheme but no valid URL', () => {
+  for (const thumbnail of ['https://', 'http://[broken']) {
+    assert.equal(URL.canParse(thumbnail), false);
+    assert.throws(() => parseProductsResponse({ ...response, products: [{ ...product, thumbnail }] }), /unexpected response/);
+  }
+});
+
 test('fetches the required URL with the supplied AbortSignal', async (context) => {
   const controller = new AbortController();
   context.mock.method(globalThis, 'fetch', async (url, options) => {

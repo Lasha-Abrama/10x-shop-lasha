@@ -176,6 +176,7 @@ Run these from the repository root:
 | `npm run dev:frontend` | Start only Vite |
 | `npm run dev:backend` | Start only NestJS |
 | `npm run typecheck` | Typecheck both apps |
+| `npm run lint` | Lint frontend TypeScript and React Hooks; fail on warnings |
 | `npm test --workspace frontend` | Run catalog/detail API, cart reducer/storage, and frontend auth/order tests with Node's built-in test runner |
 | `npm test --workspace backend` | Build and run isolated authentication/order HTTP tests with mocked Prisma and catalog |
 | `npm run build` | Typecheck and build both apps |
@@ -191,6 +192,14 @@ Run these from the repository root:
 Builds are written to `frontend/dist/` and `backend/dist/`. Build before running the preview or compiled backend. For frontend production hosting, serve `frontend/dist/` and configure an SPA fallback to `index.html` for browser routing.
 
 Use `npm install` when intentionally changing dependencies and commit the updated lockfile with those changes. Keep secrets and `.env` files out of version control.
+
+### Frontend code quality and debugging (STEP 014A)
+
+`frontend/eslint.config.mjs` uses ESLint's flat configuration, core recommended rules, and typescript-eslint recommended rules. It explicitly enforces `@typescript-eslint/no-explicit-any` and `react-hooks/rules-of-hooks` as errors, with `react-hooks/exhaustive-deps` as a warning, matching Annex A, T1. `--max-warnings 0` makes warnings fail the lint command so dependency warnings cannot be missed. TypeScript's separate strict typecheck remains required; type-aware linting, formatting rules, and React Compiler-specific rules are not added.
+
+The root `npm run lint` delegates to the frontend workspace. It checks `src/**/*.ts`, `src/**/*.tsx`, and `vite.config.ts`; generated/build/dependency/coverage directories and tests (including development-only browser fixtures) are excluded. Browser fixture TSX still participates in the existing typecheck, and tests run separately. The frontend-local scope does not traverse backend code or unrelated root skill directories. No backend lint setup existed, and this step does not introduce one. This follows the [typescript-eslint flat-config setup](https://typescript-eslint.io/packages/typescript-eslint/), with only the two React Hooks rules required by the specification.
+
+`DEBUG-LOG.md` follows Annex A, O2 and documents three independently reproduced historical defects, real fix commits, regression evidence, and lessons learned. It distinguishes retrospective reproduction from original incident records and does not count deliberately injected Error Boundary errors as bugs.
 
 ### Catalog discovery (STEP 011A)
 

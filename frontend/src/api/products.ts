@@ -83,7 +83,7 @@ export async function readProductResponse(response: Response, signal: AbortSigna
     data = await response.json();
   } catch (error: unknown) {
     if (signal.aborted) throw error;
-    throw new Error('The catalog service returned an unreadable response. Please try again.');
+    throw new Error('The catalog service returned an unreadable response. Please try again.', { cause: error });
   }
   return data;
 }

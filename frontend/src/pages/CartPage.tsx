@@ -37,7 +37,11 @@ export function CartPage() {
             </ul>
             <div className="mt-7 flex flex-wrap items-center justify-between gap-5 text-sm">
               <Link className="text-link inline-flex items-center" to="/products">Continue exploring</Link>
-              <button type="button" className="text-link" onClick={() => { dispatch({ type: 'clear' }); setFeedback('Your bag has been cleared.'); }}>Clear bag</button>
+              <button type="button" className="text-link" onClick={() => {
+                if (!window.confirm('Clear your bag? This cannot be undone.')) return;
+                dispatch({ type: 'clear' });
+                setFeedback('Your bag has been cleared.');
+              }}>Clear bag</button>
             </div>
           </div>
           <aside aria-labelledby="summary-heading" className="rounded-editorial bg-surface p-7 sm:p-8">

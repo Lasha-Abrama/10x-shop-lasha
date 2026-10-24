@@ -11,7 +11,7 @@ The goal is a responsive storefront demonstrating React components/state/effects
 | React | Layout/routing, catalog/details, cart, controlled login/checkout, Context/effects | Implemented; four-field checkout added in 013B. Exact route/copy/cart details remain flagged in REQUIREMENTS. |
 | TypeScript | Strict typed props/state/API data, no `any`, typecheck/lint | Implemented, with boundary validation, typed reducers/unions and safe money. |
 | Tailwind | v4, responsive flex/grid, interactive states | Implemented with tokens, local typography, focus and reduced-motion styles; complete cross-browser/accessibility evidence pending. |
-| Optimization/debugging | Error recovery, responsive behavior, genuine debugging evidence | Boundary/recovery and DEBUG-LOG exist; `componentDidCatch` named in Annex is absent. Lighthouse/tool-demonstration evidence pending. |
+| Optimization/debugging | Error recovery, responsive behavior, genuine debugging evidence | Boundary/recovery, both required lifecycle methods and DEBUG-LOG exist. Lighthouse/tool-demonstration evidence pending. |
 | Project process | Repository/history, README, PLAN, REPORT, working deploy | Documents updated here; deployment, public access checks, final QA and submission unfinished. |
 
 The completed/partial/missing/unverified checklist is [REQUIREMENTS.md](REQUIREMENTS.md). Selected FULL work includes discovery/URL state, order history, persistence, generics/type guards, lazy loading and tokens. Formik/Yup, dark mode, reviews, related products, promo codes, editable profile and the complete FULL process/evidence package are not delivered. Optional examples do not become mandatory architectures merely because they appear in Annex A.
@@ -78,7 +78,11 @@ Verification repeated for STEP 014B on 24 October 2026:
 
 Frontend Node tests mock fetch and cover response/URL validation, money, cart/storage recovery, auth, checkout/order payloads, uncertainty, form validation and reliability. Backend tests use real local HTTP, DTOs, Argon2/JWT operations and mocked Prisma/catalog; they do not touch Neon. Mock transaction failures test application handling, not PostgreSQL rollback guarantees. No database operation or live write was performed in STEP 014B.
 
-Development browser fixtures provide 22 checkout assertions with isolated fetch/storage mocks and 14 reliability assertions. They passed in earlier local checks, not a committed cross-browser matrix or production report. STEP 014A finalization smoke-tested real DummyJSON search/category/sort/pagination, back/forward and cancellation of an unfinished draft without console warnings. That is earlier evidence, not a new STEP 014B browser session.
+At STEP 014B, development browser fixtures provided 22 checkout assertions with isolated fetch/storage mocks and 14 reliability assertions. They passed in earlier local checks, not a committed cross-browser matrix or production report. STEP 014A finalization smoke-tested real DummyJSON search/category/sort/pagination, back/forward and cancellation of an unfinished draft without console warnings. That is earlier evidence, not a new STEP 014B browser session.
+
+STEP 014C verification (24 October 2026): lint, root typecheck/build, 73 frontend tests, 97 backend tests and whitespace checks pass. The isolated browser fixtures passed 27 checkout/cart assertions and 14 reliability assertions; cancellation preserves items/storage and acceptance persists one clear update. Cart screenshots were inspected at 1440px and 375px, with no mobile horizontal overflow. Native dialog automation timed out and the bag subsequently cleared before a dialog handle was available; native keyboard activation, Escape/confirmation and refresh persistence remain manual QA items. Finalization reproduced a timeout on keyboard activation without an inspectable dialog; no native keyboard pass is claimed. The isolated fixture resets its mock storage on reload, so it cannot verify real refresh persistence. No live API writes were made. Production output excludes the browser fixtures and development diagnostic.
+
+Error Boundaries handle descendant render failures and lazy-import rejection. They do not catch ordinary API failures or every asynchronous/event-handler error. Existing fetch error states remain separate. Diagnostics never include error objects, stack traces or user content; no external reporting was added.
 
 Previous project sessions separately authorized real auth/checkout verification. No current record count, password, order ID or fresh live-flow result is inferred here. Dedicated test credentials remain private.
 
@@ -92,7 +96,7 @@ No public deployment is verified. Backend configuration accepts only loopback fr
 
 Other limits: per-process in-memory rate limiting, memory-only sessions, no idempotency key, latest-50 order history without paging, no stock reservation, no contact/address persistence and dependence on DummyJSON/CDN. Combined filters load all search matches. Bag money uses a safe-integer bound; the backend applies the tighter PostgreSQL bound and can reject an oversized selection. Supplier minimum quantities, cross-tab cart synchronization, taxes, payments and shipping are not implemented.
 
-The boundary lacks the specified `componentDidCatch`; Clear bag has no confirmation; some route/copy/active-link and pagination-scroll details differ from Annex A. REQUIREMENTS tracks corrections or lecturer clarification. Comprehensive Chrome/Firefox/device QA, keyboard/contrast evidence, Sources/Profiler demonstrations and Lighthouse remain outstanding. Local test passes are not graduation sign-off.
+STEP 014C adds generic development-only `componentDidCatch` diagnostics and native Clear bag confirmation. Some route/copy/active-link and pagination-scroll details still differ from Annex A. REQUIREMENTS tracks corrections or lecturer clarification. Comprehensive Chrome/Firefox/device QA, keyboard/contrast evidence, Sources/Profiler demonstrations and Lighthouse remain outstanding. Local test passes are not graduation sign-off.
 
 ## What I would do differently / next improvements
 

@@ -92,6 +92,8 @@ Registration/login accept validated email and a **15–128-character password**.
 
 The bag's versioned localStorage key is `10x-shop.cart.v1`; malformed/unsafe data recovers to an empty bag. Quantities are stock-bounded and totals use validated integer cents. Bag prices/stock are snapshots, not inventory guarantees.
 
+Clearing the entire bag requires native browser confirmation. Cancel preserves the bag; confirmation clears it and updates persisted storage. Individual item removal is unchanged.
+
 Checkout requires controlled **full name, email, address and city** inputs with local validation. Use sample details: these values remain in React memory, appear only in immediate confirmation, and are **not sent to NestJS, saved in browser storage or included in order history**. Leaving/refreshing checkout discards them. Guests go to login with an allowlisted internal return route; authenticated empty checkout returns to the bag.
 
 The order request contains only IDs and quantities:
@@ -135,7 +137,9 @@ Run commands from the repository root:
 | `npm run prisma:studio --workspace backend` | Private database inspection UI. |
 | `git diff --check` | Check patch whitespace. |
 
-On Vite's development server, `/tests/checkout.html` runs 22 assertions with isolated fetch/storage mocks, and `/tests/reliability.html` runs 14 boundary/lazy/memo assertions without API writes. They are excluded from production output and frontend lint; fixture TSX remains typechecked. Successful order tests must use mocks unless a live write is separately approved. REPORT records the dated verification snapshot and limits.
+On Vite's development server, `/tests/checkout.html` runs 27 assertions with isolated fetch/storage mocks, and `/tests/reliability.html` runs 14 boundary/lazy/memo assertions without API writes. They are excluded from production output and frontend lint; fixture TSX remains typechecked. Successful order tests must use mocks unless a live write is separately approved. REPORT records the dated verification snapshot and limits.
+
+The class Error Boundary uses `getDerivedStateFromError` and `componentDidCatch`. Development diagnostics contain only a fixed generic message; production emits no application diagnostic. The fallback exposes no internal details. Boundaries catch descendant rendering errors (including failed lazy imports), not ordinary API failures or every asynchronous/event-handler error; those keep their existing local error handling.
 
 ## Deployment and remaining work
 

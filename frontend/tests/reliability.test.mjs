@@ -34,6 +34,33 @@ test('boundary leaves healthy children intact and renders a safe accessible fall
   assert.equal(findElement(boundary.render(), 'a').props.href, '/');
 });
 
+test('componentDidCatch emits only a generic development diagnostic', (context) => {
+  const diagnostic = context.mock.method(console, 'error', () => {});
+  const boundary = new ErrorBoundary({ children: null });
+  boundary.componentDidCatch(new Error('PRIVATE_PASSWORD_OR_TOKEN'), { componentStack: 'PRIVATE_STACK' });
+  assert.deepEqual(diagnostic.mock.calls.map((call) => call.arguments), [
+    ['10X Shop caught an unexpected rendering error.'],
+  ]);
+});
+
+test('componentDidCatch stays silent in production', async (context) => {
+  const production = await createServer({
+    configFile: false, root: new URL('../', import.meta.url).pathname, mode: 'production',
+    // A development SSR server already exists in this process; model the build's DEV constant explicitly.
+    define: { 'import.meta.env.DEV': false },
+    server: { middlewareMode: true, watch: null, ws: false },
+    optimizeDeps: { noDiscovery: true, include: [] }, esbuild: { jsx: 'automatic' },
+  });
+  try {
+    const { ErrorBoundary: ProductionBoundary } = await production.ssrLoadModule('/src/components/ErrorBoundary.tsx');
+    const diagnostic = context.mock.method(console, 'error', () => {});
+    new ProductionBoundary({ children: null }).componentDidCatch();
+    assert.equal(diagnostic.mock.callCount(), 0);
+  } finally {
+    await production.close();
+  }
+});
+
 test('boundary recovery reloads once without replaying a request or changing storage', (context) => {
   const reload = context.mock.fn();
   Object.defineProperty(globalThis, 'window', { configurable: true, value: { location: { reload } } });

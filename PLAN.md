@@ -25,7 +25,8 @@ The original PLAN was committed with the foundation in `f81658d` on 19 October. 
 | 012 | Error Boundary, lazy routes, targeted memoization | `07848ae` |
 | 013A–B | Requirements audit; controlled checkout, card add, navigation | Audit in task history; implementation `2010131` |
 | 014A | ESLint, regression evidence, DEBUG-LOG | `a5c5f6f` |
-| 014B | README/PLAN/REPORT and requirements mapping | Current documentation changes; awaiting review, not committed |
+| 014B | README/PLAN/REPORT and requirements mapping | `4d54f62` |
+| 014C | Boundary lifecycle and Clear bag confirmation, focused tests | Implemented and verified; native keyboard-dialog QA remains explicit |
 
 Steps 009C/010C were separately authorized manual verification sessions, not invented feature commits. This table does not imply fresh live-flow verification or a current database record count.
 
@@ -33,7 +34,7 @@ Steps 009C/010C were separately authorized manual verification sessions, not inv
 
 | Priority / step | Work | Definition of done | Size / dependency |
 | --- | --- | --- | --- |
-| P0 / CORE detail review | Resolve literal Annex differences in REQUIREMENTS: boundary lifecycle, Clear bag confirmation, route/copy variations | Scoped corrections or explicit lecturer acceptance reviewed; no unexplained complete claims | Small; before final sign-off |
+| P0 / CORE detail review | Resolve literal Annex differences in REQUIREMENTS: remaining route/copy/active-link variations | Scoped corrections or explicit lecturer acceptance reviewed; no unexplained complete claims | Small; before final sign-off |
 | P0 / 015 | Deployment preparation/hosting | Public-origin validation corrected/tested; HTTPS frontend/API and private secrets configured; reviewed migration status; SPA deep-link refresh works; live URL recorded | Medium; code review/hosting choices |
 | P0 / 016 | Production QA/evidence | All-page/device/browser matrix, keyboard/error/empty checks, authorized demo flow and genuine Lighthouse evidence recorded; failures resolved | Medium; requires deployment |
 | P0 / documentation closeout | Update REPORT/REQUIREMENTS/README | Actual live links, test/bundle/Git metrics and limitations current; owner review | Small; after QA |

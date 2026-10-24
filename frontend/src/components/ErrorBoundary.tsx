@@ -9,6 +9,11 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { hasError
     return { hasError: true };
   }
 
+  componentDidCatch() {
+    // Keep diagnostics generic: rendered content may contain private user data.
+    if (import.meta.env.DEV) console.error('10X Shop caught an unexpected rendering error.');
+  }
+
   render() {
     if (!this.state.hasError) return this.props.children;
     return <section role="alert" className="page-width min-h-112 py-16 sm:py-24">

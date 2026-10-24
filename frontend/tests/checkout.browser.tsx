@@ -13,10 +13,11 @@ import { ProductCard } from '../src/components/ProductCard';
 import { Layout } from '../src/components/Layout';
 import '../src/styles.css';
 
+let storageWrites = 0;
 const memory = new Map<string, string>();
 Object.defineProperty(window, 'localStorage', { value: {
   getItem: (key: string) => memory.get(key) ?? null,
-  setItem: (key: string, value: string) => { memory.set(key, value); },
+  setItem: (key: string, value: string) => { storageWrites += 1; memory.set(key, value); },
   removeItem: (key: string) => { memory.delete(key); },
 } });
 const now = '2026-10-24T12:00:00.000Z';
@@ -171,10 +172,32 @@ async function run() {
   await waitFor(() => !container?.textContent?.includes(user.email));
   check(itemCount() === '2' && container?.querySelector('output')?.getAttribute('data-route') === '/products', 'Logout returns to the catalog without clearing the bag');
 
+  render(true, true, '/cart');
+  const clearButton = () => [...(container?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((button) => button.textContent === 'Clear bag');
+  await waitFor(() => Boolean(clearButton()));
+  const originalConfirm = window.confirm;
+  let confirmations = 0;
+  const savedBag = JSON.stringify([...memory]);
+  const writes = storageWrites;
+  try {
+    window.confirm = (message) => { confirmations += 1; check(message === 'Clear your bag? This cannot be undone.', 'Clear bag explains the irreversible action'); return false; };
+    flushSync(() => clearButton()?.click());
+    check(itemCount() === '1' && JSON.stringify([...memory]) === savedBag && storageWrites === writes, 'Cancel preserves all bag items and persisted storage');
+    check(!container?.textContent?.includes('Your bag has been cleared.'), 'Cancellation does not announce successful clearing');
+    window.confirm = () => { confirmations += 1; return true; };
+    flushSync(() => clearButton()?.click());
+    await waitFor(() => itemCount() === '0');
+    check(storageWrites === writes + 1 && confirmations === 2 && !clearButton(), 'Acceptance clears and persists exactly once, removing the clear action');
+    check(Boolean(container?.textContent?.includes('Your bag has been cleared.')) && Boolean(container?.textContent?.includes('Room for something good.')), 'Confirmed clearing announces success and shows the empty bag');
+  } finally {
+    window.confirm = originalConfirm;
+  }
+
   flushSync(() => root.render(<section className="page-width py-16"><h1 className="section-title">Checkout checks passed.</h1><p role="status" className="mt-6">{passed.length} browser assertions passed. All API responses and storage were isolated; no live writes.</p><ul className="mt-6 list-disc space-y-2 pl-5">{passed.map((message) => <li key={message}>{message}</li>)}</ul></section>));
 }
 const mode = new URLSearchParams(location.search).get('case');
 if (mode === 'form') render();
+else if (mode === 'cart') render(true, true, '/cart');
 else if (mode === 'card') render(true, false, '/products');
 else void run().catch((error: unknown) => {
   flushSync(() => root.render(<p role="alert">Checkout fixture failed: {error instanceof Error ? error.message : 'unknown assertion'}</p>));

@@ -4,7 +4,7 @@
 
 Repository: [Lasha-Abrama/10x-shop-lasha](https://github.com/Lasha-Abrama/10x-shop-lasha), matching the configured Git origin. Public reviewer access still needs verification.
 
-**Deployment:** not deployed or verified publicly; no live demo URL is available yet. [PLAN.md](PLAN.md) tracks remaining work, [REPORT.md](REPORT.md) records results, [REQUIREMENTS.md](REQUIREMENTS.md) maps the specification, and [DEBUG-LOG.md](DEBUG-LOG.md) documents three verified historical defects.
+**Deployment (verified 25 October 2026):** [storefront](https://10x-shop-lasha.vercel.app/) on Vercel **Ready**, [NestJS backend](https://one0x-shop-lasha.onrender.com/) on Render **Live**, and [health](https://one0x-shop-lasha.onrender.com/health) returning HTTP 200. Production commit: `24107f8f701841e09c7dfc912e5ad6b32623eeab`. Authentication and order storage use an isolated production Neon PostgreSQL project; products come from DummyJSON. [PLAN.md](PLAN.md) tracks remaining work, [REPORT.md](REPORT.md) records results, [REQUIREMENTS.md](REQUIREMENTS.md) maps the specification, and [DEBUG-LOG.md](DEBUG-LOG.md) documents three verified historical defects.
 
 ## Features and scope
 
@@ -143,9 +143,11 @@ The class Error Boundary uses `getDerivedStateFromError` and `componentDidCatch`
 
 ## Deployment and remaining work
 
-Deployment has **not** been performed. STEP 015A prepares explicit HTTPS origin validation, Node 24.x selection, a public backend bind address and Vercel SPA rewrites. Follow [DEPLOYMENT.md](DEPLOYMENT.md) for Vercel/Render settings, environment names, isolated Neon setup, approved migrations, health checks and safe release verification. No hosting configuration or live database operation has been performed. Frontend output is `frontend/dist/`; NestJS runs `backend/dist/main.js` after build.
+The frontend and backend are live; [DEPLOYMENT.md](DEPLOYMENT.md) records settings, evidence and remaining operational checks. Render Free can cold-start. Previously authorized full-stack smoke tests are reported by the owner; this documentation review creates no users or orders.
 
-After deployment, verify direct/refresh routes, CORS, auth/logout, the complete demo flow, accessibility and supported browsers; record genuine Lighthouse evidence and update live links, metrics and the checklist. Do not claim submission readiness until those checks and remaining Annex details are resolved.
+On 25 October, measured mobile Lighthouse changed from **77 / 100 / 100 / 92** to **89 / 100 / 100 / 100** (repeat performance **87**); desktop changed from **99 / 100 / 100 / 92** to **100 / 100 / 100 / 100**. Category order is Performance / Accessibility / Best Practices / SEO. Responsive hero WebP/preload and valid robots.txt are deployed. [REPORT.md](REPORT.md#production-verification-and-lighthouse--25-october-2026) contains source reports, timings and measurement limits.
+
+The latest implementation validation passed lint, typecheck, build, **75 frontend tests** and **99 backend tests**; these were not rerun for this documentation-only step. Two high npm audit entries remain for the same Multer advisory; see REPORT. Complete the [acceptance checklist](REQUIREMENTS.md#final-acceptance-checklist--26-october-2026), including browser/keyboard QA and rubric clarification, before submission sign-off.
 
 ## Credits and defense notes
 

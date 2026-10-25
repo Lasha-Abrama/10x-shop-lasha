@@ -1,6 +1,6 @@
 # Requirements traceability
 
-Snapshot: **24 October 2026**, STEP 015A, before deployment. Sources inspected: **10X-Shop-Graduation-Project-PRD.docx**, version 1.1, and **დანართი A.docx (Annex A)** in the accessible workspace. Neither is committed here. English descriptions summarize named sections, not invented requirements. Lecturer approval of the backend extension is confirmed by the student; no written approval artifact is in the repository.
+Reviewed **26 October 2026**, STEP 017A; production evidence dated 25 October. Original rubric inspection: 24 October. Sources inspected: **10X-Shop-Graduation-Project-PRD.docx**, version 1.1, and **დანართი A.docx (Annex A)** in the accessible workspace. Neither is committed here. English descriptions summarize named sections, not invented requirements. Lecturer approval of the backend extension is confirmed by the student; no written approval artifact is in the repository.
 
 **Status:** COMPLETE = named implementation/evidence exists; PARTIAL = specified details remain; MISSING = absent; NOT VERIFIED = inadequate current verification. Complete code does not imply production/cross-browser sign-off. Classification follows the PRD and explicit Annex module levels; detailed examples are not automatically mandatory architectures.
 
@@ -24,10 +24,10 @@ Snapshot: **24 October 2026**, STEP 015A, before deployment. Sources inspected: 
 | O2: class boundary, `getDerivedStateFromError`, `componentDidCatch`, fallback/reload | COMPLETE | [ErrorBoundary](frontend/src/components/ErrorBoundary.tsx), [tests](frontend/tests/reliability.test.mjs) | Both lifecycles implemented; generic development-only diagnostics and existing accessible recovery preserved. Editorial fallback wording retained; broader route/copy variations remain tracked above. |
 | O2: three real bugs in required DEBUG-LOG format | COMPLETE | [DEBUG-LOG](DEBUG-LOG.md), existing fix commits/regressions | Retrospective reproduction disclosed; five diverse FULL incidents not supplied. |
 | O2: Console/Network/Sources and React DevTools demonstrations | PARTIAL | DEBUG-LOG, earlier browser checks, [workflow](REPORT.md#reproducible-debugging-workflow) | Demonstrate/capture Sources breakpoints and Components/Profiler honestly; no recordings claimed. |
-| O1: deployed Lighthouse report (CORE evidence; FULL target scores) | MISSING | No reports in repository | Capture genuine deployed baseline; no invented before/after scores. |
+| O1: deployed Lighthouse report (CORE evidence; FULL target scores) | COMPLETE | [Dated production comparison and report links](REPORT.md#production-verification-and-lighthouse--25-october-2026): mobile 89 (repeat 87), desktop 100; A/BP/SEO 100 | CORE measured evidence exists; scores vary and do not establish every FULL criterion. |
 | O3 / PRD 19, 21: responsive full flow, Chrome + Firefox | NOT VERIFIED | Earlier targeted checks and mock fixtures | Complete all-page/device/browser matrix and keyboard/contrast review; no COMPATIBILITY report yet. |
-| D1–D3 / PRD 2, 25: plan/report/English README/real history | PARTIAL | [PLAN](PLAN.md), [REPORT](REPORT.md), [README](README.md); original plan `f81658d` | Current docs await review; planned hours unrecorded; live link/final metrics missing. |
-| D2 / PRD 24: public repository/live deploy/direct-route refresh | NOT VERIFIED | Configured GitHub origin and 14 local commits | Verify public visibility; review [deployment preparation](DEPLOYMENT.md), configure exact HTTPS origins and isolated database, deploy both hosts, test SPA refresh/CORS, record live URL. |
+| D1–D3 / PRD 2, 25: plan/report/English README/real history | PARTIAL | [PLAN](PLAN.md), [REPORT](REPORT.md), [README](README.md); original plan `f81658d` | Live links and measured results recorded; owner review and planned-hour/process evidence remain incomplete. |
+| D2 / PRD 24: public repository/live deploy/direct-route refresh | PARTIAL | Frontend Vercel Ready, backend Render Live at `24107f8`; isolated production Neon; targeted deployed route/asset checks in [deployment guide](DEPLOYMENT.md) | Verify unauthenticated repository reviewer access and complete direct-route/browser/CORS matrix; deployed status alone is not full sign-off. |
 | PRD 28: final checks/submission by 6 November, 23:59 Georgia time | MISSING | [remaining plan](PLAN.md) | Owner must finish QA and submit through required form. |
 
 ## Selected FULL work and deferred extensions
@@ -42,7 +42,31 @@ Snapshot: **24 October 2026**, STEP 015A, before deployment. Sources inspected: 
 | O1: lazy routes/images and targeted memoization | COMPLETE | [lazy routes](frontend/src/App.tsx), lazy card images, memo ProductGrid; historical bundle table in REPORT. Gallery thumbnails are eager; no runtime-speed claim. |
 | TW FULL: tokens, dark mode, theme variants | PARTIAL | `@theme` tokens exist; dark-mode switch missing. |
 | PRD 17: reviews/related products/promo | MISSING | Deferred optional features. |
-| O2 FULL: five diverse bugs; O1/O3 FULL measured quality/evidence | MISSING | Three bugs only; no Lighthouse targets or full browser evidence package. |
+| O2 FULL: five diverse bugs; O1/O3 FULL measured quality/evidence | PARTIAL | Three bugs only; measured Lighthouse reports exist, but complete FULL target compliance and browser evidence package are not established. |
 | D FULL: Issues/Projects/PRs, weekly notes, time records/video | NOT VERIFIED | Hosted counts not checked; no weekly-note/time/video artifacts. Do not fabricate history to meet target numbers. |
 
 Real auth, Prisma/Neon and persistent orders are approved extensions, not substitutes for these rows. Stripe, AI, admin UI, real shipping and stock reservation are outside the delivery plan; the supplied CORE requirements do not make them mandatory. Resolve CORE/evidence gaps before more optional work.
+
+## Final acceptance checklist — 26 October 2026
+
+**Completed with recorded evidence**
+
+- Frontend and NestJS backend deployed; public health returned 200 on 25 October. Production Neon isolation is owner-confirmed; see [DEPLOYMENT.md](DEPLOYMENT.md).
+- Responsive WebP/preload, valid production robots.txt and favicon assets deployed. Lighthouse before/after links and repeat mobile results are in [REPORT.md](REPORT.md#production-verification-and-lighthouse--25-october-2026); SEO measured 100.
+- Latest implementation checks passed lint, typecheck, build, 75 frontend and 99 backend tests. These are STEP 016D results, not a new documentation-step test run or a coverage percentage.
+- Documentation distinguishes DummyJSON products, real NestJS/Neon auth/order storage, simulated PENDING_PAYMENT checkout, memory-only JWT refresh logout and Render Free cold starts.
+
+**Partially verified / requires final acceptance**
+
+- Owner reports prior full-stack smoke tests; no new users/orders were created for this review. Complete the authorized reviewer walkthrough without assuming a fresh end-to-end pass.
+- Targeted responsive and route checks passed; complete Chrome/Firefox, all-page/direct-refresh, focus/contrast, error/offline and native Clear bag keyboard/Escape/persistence QA. DPR 2/3 and production network duplicate checks remain gaps.
+- Resolve catalog-at-root, recovery-copy and active-link variations through scoped corrections or lecturer acceptance. Selected FULL features remain partial; no complete FULL claim.
+- Security patches are deployed according to build evidence; runtime versions were not introspected. Two high package entries remain for one Multer advisory; no affected upload configuration was found. Reassess before adding uploads.
+
+**Outstanding owner / evidence actions**
+
+- Verify public repository access as an unauthenticated reviewer; arrange private reviewer credentials without publishing secrets.
+- Capture Sources/React DevTools demonstrations and remaining browser evidence. Confirm Annex/process expectations for absent time records, weekly notes, PR/issue evidence and video; do not fabricate them.
+- Review this documentation, prepare the defense, and submit the required form by **6 November 2026, 23:59 UTC+4**. No submission or graduation sign-off is claimed.
+
+Render cold starts, external DummyJSON/CDN availability, memory-only sessions, no server idempotency and latest-50 order history remain disclosed demo limitations. Real payments/shipping and optional FULL extensions are outside the delivery plan.

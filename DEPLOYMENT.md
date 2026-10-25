@@ -1,12 +1,21 @@
-# Deployment preparation — pending
+# Deployment guide and production status
 
-STEP 015A prepares configuration only. No hosting account settings, public deployment, database branch, migration or live write has been performed. Public URLs and production behavior remain **unverified**.
+Reviewed **26 October 2026**, STEP 017A. Configuration began in STEP 015A; deployment and targeted production verification followed on 25 October. This review changes documentation only and authorizes no hosting or database operation.
+
+| Service | Public URL | Confirmed status, 25 October |
+| --- | --- | --- |
+| Vercel frontend | [10X Shop](https://10x-shop-lasha.vercel.app/) | Ready, commit `24107f8f701841e09c7dfc912e5ad6b32623eeab` |
+| Render backend | [NestJS API](https://one0x-shop-lasha.onrender.com/) | Live, same commit |
+| Health | [/health](https://one0x-shop-lasha.onrender.com/health) | HTTP 200, `{"status":"ok"}` |
+| Neon PostgreSQL | Private connection details withheld | Isolated production project, owner-confirmed |
+
+Deployment/build evidence includes security commit `a4812c0` and the patched lockfile; runtime dependency versions were not directly introspected. Production WebP, robots.txt and favicon assets resolve; targeted route checks and measured Lighthouse results are recorded in [REPORT.md](REPORT.md#production-verification-and-lighthouse--25-october-2026). Earlier full-stack smoke tests are owner-reported; comprehensive browser/operational QA is still incomplete.
 
 ## Recommended layout
 
 Use Vercel for static frontend files, one Render Node web service for NestJS, and Neon PostgreSQL. Keep **both hosting project roots at the repository root** so the existing npm workspace lockfile and root TypeScript dependency are available. No Docker, serverless NestJS conversion or new service is needed.
 
-Use Node **24.x** on both hosts and npm **11 or newer**. The installed NestJS 11, Prisma 7.10.1, Vite 7, ESLint 10 and Argon2 packages accept Node 24. The root engine is bounded to prevent a future Node major being selected automatically. Actual Linux Argon2 installation and cloud builds still need verification; do not disable install scripts or omit build-time development dependencies.
+Use Node **24.x** on both hosts and npm **11 or newer**. The installed NestJS 11, Prisma 7.10.1, Vite 7, ESLint 10 and Argon2 packages accept Node 24. The root engine is bounded to prevent a future Node major being selected automatically. Cloud builds completed successfully and both services are live. Do not disable install scripts or omit build-time development dependencies; runtime version introspection was outside the read-only audit.
 
 ## Environment names and locations
 
@@ -25,9 +34,9 @@ Only the public API URL belongs in Vite configuration. Never add backend secrets
 
 Preview deployments must not automatically use production credentials or write to the deployment database. Leave backend-connected previews disabled until a separate test target and exact origin allowlist are arranged. Do not allow `*.vercel.app` or arbitrary request origins.
 
-## Neon: decide isolation before deployment
+## Neon isolation and future migration safety
 
-Keep the existing development database private to local development. Before public testing, arrange a separate deployment database/branch and separate connection credentials with the owner. Prefer a clean schema-only branch or empty database to avoid exposing copied development accounts/orders. A normal Neon branch copies existing data, even though subsequent writes are isolated. If schema-only branching is used, inspect its migration history before proceeding; do not blindly baseline or replay migrations over existing tables. No branch/database is created by this milestone.
+The owner confirms a separate isolated production Neon project. Keep development and production credentials/data separate. For any future target, arrange a separate database/branch and credentials with the owner before public testing. Prefer a clean schema-only branch or empty database to avoid exposing copied development accounts/orders. A normal Neon branch copies existing data, even though subsequent writes are isolated. If schema-only branching is used, inspect its migration history before proceeding; do not blindly baseline or replay migrations over existing tables. No branch/database is created or inspected by STEP 017A.
 
 Both connections must use TLS. The safe backend example now uses `sslmode=verify-full`; retain any required Neon connection options, and never disable certificate verification to bypass a failure. Existing local secrets were not edited. The PrismaPg runtime pool already has a maximum of five connections and a ten-second connection timeout. Choose Render's region near the Neon region after checking availability.
 
@@ -53,11 +62,11 @@ Migrations are deliberately absent from build/start commands. Render pre-deploy 
 | Health check path | `/health` |
 | Environment | Backend names above; keep secrets server-side |
 
-Keep auto-deploy disabled until the first release and migration sequence are reviewed. `npm ci` installs the locked workspaces; the build compiles only the backend. No migration runs on startup. The startup database check must succeed before NestJS listens. `GET /health` returns `{"status":"ok"}` once running, but it does **not** continuously query Neon: a later database outage can leave health green while auth/orders return sanitized errors.
+The existing deployment workflow is live; this review does not change auto-deploy settings. Review release and migration sequencing before future changes. `npm ci` installs the locked workspaces; the build compiles only the backend. No migration runs on startup. The startup database check must succeed before NestJS listens. `GET /health` returns `{"status":"ok"}` once running, but it does **not** continuously query Neon: a later database outage can leave health green while auth/orders return sanitized errors.
 
 ### Availability and rate-limit limits
 
-Render Free currently sleeps after 15 minutes idle, may take about one minute to wake, and has a shared monthly instance-hour allowance. It is a demonstration option, not an always-available production guarantee. Verify current plan limits, memory/build capacity, outbound database access, and native Argon2 installation before choosing it. Prefer an always-on paid instance for predictable exam/demo availability if the owner approves its cost. Do not implement artificial keep-alive traffic to evade plan limits. Neon may also suspend idle compute; verify its current plan, quotas, restore window and cold-start behavior.
+Render Free can cold-start; the deployment dashboard warns that waking may take 50 seconds or more. A warm health response does not establish cold-start latency or continuous availability. Account for this during the graduation demo and verify current provider limits before changing plans. No paid-plan change or artificial keep-alive is introduced. Neon compute availability and quotas also require operational awareness.
 
 The existing throttler uses per-process memory and does not trust forwarded headers. Behind Render's proxy, clients may share an IP bucket; redeploy/restart clears counters, and multiple instances would not share limits. Verify actual proxy behavior and two-client rate limiting before public testing. Do not set blanket `trust proxy=true` or trust arbitrary `X-Forwarded-For` values. If a bounded trusted-proxy configuration is needed, review the provider's actual chain separately and regression-test spoofing before changing it. No proxy-trust change is made here.
 
@@ -77,19 +86,21 @@ The root `vercel.json` supplies the documented SPA fallback to `/index.html`, al
 
 Choose the stable frontend production domain, configure that exact origin on Render, then set the Render HTTPS API URL in Vercel **before building**. Local `.env.local` is ignored by Git and must not be uploaded. The frontend has a localhost fallback for local use; a missing production setting would therefore break API calls. Check the deployed browser's request destination. A successful Vite build alone does not prove the production URL was set correctly.
 
-## Safe release verification — still pending
+## Safe release verification and remaining QA
 
-1. Review this diff and hosting plan costs/limits. Confirm database isolation, secrets, target migrations and exact domains privately before deployment. This guide does not authorize live schema changes or writes.
+Recorded deployment, health/assets and Lighthouse checks above are complete; the full checklist below is a repeatable release procedure, not a claim every item passed. The [acceptance checklist](REQUIREMENTS.md#final-acceptance-checklist--26-october-2026) distinguishes the remaining items.
+
+1. Review the release diff and hosting plan costs/limits. Confirm database isolation, secrets, target migrations and exact domains privately before deployment. This guide does not authorize live schema changes or writes.
 2. After separately authorized migration/deployment, check the public API `/health`, then open the static frontend. Confirm HTTPS, assets, actual API destination and exact-origin CORS/preflight. Check that an unlisted origin receives no allow-origin header; CORS is not authentication or a block on non-browser clients.
 3. Refresh direct catalog/detail/cart/login/account/checkout/orders URLs and an unknown route. Confirm React Router recovery rather than a hosting 404, and no fixture output in deployed assets.
 4. Verify guest/protected views and unauthenticated `/auth/me` (`401`) without creating data. Do not repeatedly submit invalid credentials and trigger rate limits during basic connectivity checks. Do not capture tokens or private request bodies in evidence.
 5. Verify proxy/rate-limit behavior, cold/warm startup, database-outage handling and desktop/mobile behavior. Keep native Clear bag keyboard/Escape/confirmation/refresh QA explicit until observed.
 6. Successful registration/order tests require separate approval and a designated disposable account. Never retry an uncertain order automatically; inspect history/database read-only first. JWTs remain memory-only, so refreshing signs the user out while the bag persists. No payment, shipping or stock reservation occurs.
-7. Record tested public URLs, actual browser matrix and Lighthouse evidence in README/REPORT/REQUIREMENTS. Deployment and final QA remain pending until these checks are observed.
+7. Record tested public URLs, actual browser matrix and Lighthouse evidence in README/REPORT/REQUIREMENTS. Deployment is live; final QA remains incomplete until the outstanding checks are observed.
 
 ## Local verification for STEP 015A
 
-Lint, root typecheck/build, 73 frontend tests, 99 backend tests (including explicit public-origin/preflight cases), and `git diff --check` pass. Local connection configuration was inspected without connecting: both URLs request TLS, runtime is pooled, CLI is direct, and both identify the same target. No configured backend secret was found in tracked files or generated frontend JavaScript; private environment paths are absent from the index/history. SPA configuration JSON and Node engine/lockfile consistency were checked locally. The rewrite matches Vercel’s documented Vite SPA configuration and filesystem-before-rewrite routing order. Actual hosted routing, cloud installation, live TLS connectivity, proxy behavior and production availability remain unverified.
+Lint, root typecheck/build, 73 frontend tests, 99 backend tests (including explicit public-origin/preflight cases), and `git diff --check` pass. Local connection configuration was inspected without connecting: both URLs request TLS, runtime is pooled, CLI is direct, and both identify the same target. No configured backend secret was found in tracked files or generated frontend JavaScript; private environment paths are absent from the index/history. SPA configuration JSON and Node engine/lockfile consistency were checked locally. The rewrite matches Vercel’s documented Vite SPA configuration and filesystem-before-rewrite routing order. These were local STEP 015A results. Subsequent cloud builds, live health/assets and targeted routing are recorded above; comprehensive routing, proxy/rate-limit and availability checks remain incomplete.
 
 ## References checked during preparation
 

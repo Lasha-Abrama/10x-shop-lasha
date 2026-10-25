@@ -1,6 +1,6 @@
 # 10X Shop — graduation report
 
-**Author:** Lasha Abramishvili. **Snapshot:** 24 October 2026, STEP 014B, before deployment. This submission-oriented draft follows Annex A, D3. Live links, production QA and final metrics still need updating before 6 November, 23:59 Georgia time.
+**Author:** Lasha Abramishvili. **Documentation review:** 26 October 2026, STEP 017A; production evidence dated 25 October. This submission-oriented report follows Annex A, D3. Dated local measurements below remain historical; current production results are recorded separately. Final owner acceptance and submission are pending before 6 November, 23:59 Georgia time.
 
 ## Goal, scope and delivered work
 
@@ -11,8 +11,8 @@ The goal is a responsive storefront demonstrating React components/state/effects
 | React | Layout/routing, catalog/details, cart, controlled login/checkout, Context/effects | Implemented; four-field checkout added in 013B. Exact route/copy/cart details remain flagged in REQUIREMENTS. |
 | TypeScript | Strict typed props/state/API data, no `any`, typecheck/lint | Implemented, with boundary validation, typed reducers/unions and safe money. |
 | Tailwind | v4, responsive flex/grid, interactive states | Implemented with tokens, local typography, focus and reduced-motion styles; complete cross-browser/accessibility evidence pending. |
-| Optimization/debugging | Error recovery, responsive behavior, genuine debugging evidence | Boundary/recovery, both required lifecycle methods and DEBUG-LOG exist. Lighthouse/tool-demonstration evidence pending. |
-| Project process | Repository/history, README, PLAN, REPORT, working deploy | Documents updated here; deployment, public access checks, final QA and submission unfinished. |
+| Optimization/debugging | Error recovery, responsive behavior, genuine debugging evidence | Boundary/recovery, both required lifecycle methods and DEBUG-LOG exist. Production Lighthouse evidence is recorded below; Sources/Profiler demonstrations remain incomplete. |
+| Project process | Repository/history, README, PLAN, REPORT, working deploy | Deployment is live; repository visibility, comprehensive final QA and submission remain unverified or unfinished. |
 
 The completed/partial/missing/unverified checklist is [REQUIREMENTS.md](REQUIREMENTS.md). Selected FULL work includes discovery/URL state, order history, persistence, generics/type guards, lazy loading and tokens. Formik/Yup, dark mode, reviews, related products, promo codes, editable profile and the complete FULL process/evidence package are not delivered. Optional examples do not become mandatory architectures merely because they appear in Annex A.
 
@@ -57,11 +57,11 @@ Splitting reduced initial JS but increased the combined compressed chunk total. 
 
 | Submission metric | Evidence at this snapshot |
 | --- | --- |
-| Lighthouse before / after | Not measured; no reports/scores claimed. Capture a genuine deployed baseline, then an after result only if a real change is made. |
-| Tracked commits / distinct author dates | 14 commits / 4 dates at `a5c5f6f`, measured from Git. STEP 014B is uncommitted; recount for final submission. |
+| Lighthouse before / after | Measured 25 October; see production comparison below. |
+| Tracked commits / distinct author dates | Historical: 14 commits / 4 dates at `a5c5f6f`. Recount at final submission; no current process count claimed. |
 | Merged PRs / closed issues | Not verified from hosting service; no count claimed. |
 | Hours by epic | Not recorded; no retrospective time-sheet total invented. |
-| Live URL / browser compatibility matrix | Not available / not completed. |
+| Live URL / browser compatibility matrix | Frontend/backend live; full Chrome/Firefox matrix not completed. |
 
 ## Testing and verification
 
@@ -92,17 +92,17 @@ Run the frontend locally and inspect Console and Network while loading/searching
 
 ## Limitations and deployment status
 
-No public deployment is verified. STEP 015A prepares exact HTTPS frontend origins (HTTP loopback only outside production), explicit public port binding and Vercel SPA rewrites; deployed behavior remains unverified. See [DEPLOYMENT.md](DEPLOYMENT.md) for hosting commands, isolation/migration review and rate-limit/cold-start limitations. Use backend-only secrets, reviewed Neon migrations, explicit HTTPS origins and frontend SPA rewrites. Publish live links only after testing them.
+The [frontend](https://10x-shop-lasha.vercel.app/) is Vercel Ready and the [backend](https://one0x-shop-lasha.onrender.com/) is Render Live at `24107f8f701841e09c7dfc912e5ad6b32623eeab`; Neon uses an isolated production project confirmed by the owner. The public [health endpoint](https://one0x-shop-lasha.onrender.com/health) returned HTTP 200 with `{"status":"ok"}` on 25 October. This is a point-in-time check, not continuous database monitoring. Render Free can cold-start. See [DEPLOYMENT.md](DEPLOYMENT.md) for settings, verification scope and remaining operational QA. No production data was changed during this review.
 
 Other limits: per-process in-memory rate limiting, memory-only sessions, no idempotency key, latest-50 order history without paging, no stock reservation, no contact/address persistence and dependence on DummyJSON/CDN. Combined filters load all search matches. Bag money uses a safe-integer bound; the backend applies the tighter PostgreSQL bound and can reject an oversized selection. Supplier minimum quantities, cross-tab cart synchronization, taxes, payments and shipping are not implemented.
 
-STEP 014C adds generic development-only `componentDidCatch` diagnostics and native Clear bag confirmation. Some route/copy/active-link and pagination-scroll details still differ from Annex A. REQUIREMENTS tracks corrections or lecturer clarification. Comprehensive Chrome/Firefox/device QA, keyboard/contrast evidence, Sources/Profiler demonstrations and Lighthouse remain outstanding. Local test passes are not graduation sign-off.
+STEP 014C adds generic development-only `componentDidCatch` diagnostics and native Clear bag confirmation. Some route/copy/active-link and pagination-scroll details still differ from Annex A. REQUIREMENTS tracks corrections or lecturer clarification. Comprehensive Chrome/Firefox/device QA, keyboard/contrast evidence and Sources/Profiler demonstrations remain outstanding; measured Lighthouse results follow below. Local test passes are not graduation sign-off.
 
 ## What I would do differently / next improvements
 
 Map the rubric before expanding the backend, keep the plan current, record debugging/time evidence when work happens, and deploy a minimal version earlier to expose CORS/SPA issues. Before real commerce use, design idempotent writes, inventory/payment workflows, shared rate-limit storage and operational monitoring separately; the demo does not imply them.
 
-Next: small CORE corrections, deployment, production QA/Lighthouse, then final links/metrics/checklist updates. Optional FULL work must not consume the 1–4 November study buffer. Theory is 5 November; submission closes 6 November at 23:59 UTC+4.
+Next: resolve remaining CORE variations with the lecturer, complete browser/keyboard and process evidence, and obtain owner acceptance using the REQUIREMENTS checklist. Optional FULL work must not consume the 1–4 November study buffer. Theory is 5 November; submission closes 6 November at 23:59 UTC+4.
 
 ## AI assistance and credits
 
@@ -113,7 +113,7 @@ Next: small CORE corrections, deployment, production QA/Lighthouse, then final l
 - No turnkey auth service was used; secrets/test passwords remain private. No complete prompt-by-prompt AI log is claimed.
 - The student must understand and explain the code and limitations during defense; assistance does not replace preparation.
 
-Data/images: DummyJSON. Font/photo provenance: [README credits](README.md#credits-and-defense-notes) and [ASSET-LICENSES.md](frontend/public/images/ASSET-LICENSES.md). This report awaits owner review and post-deployment updates.
+Data/images: DummyJSON. Font/photo provenance: [README credits](README.md#credits-and-defense-notes) and [ASSET-LICENSES.md](frontend/public/images/ASSET-LICENSES.md). STEP 017A documentation is owner-approved; final graduation acceptance evidence remains pending.
 
 ## STEP 016C — targeted security and robots correction, 25 October 2026
 
@@ -129,4 +129,38 @@ The update removes the body-parser compressed-body denial-of-service advisory ([
 
 Validation passed: lint, both workspace typechecks/builds, **73 frontend tests**, **99 backend tests**, and `git diff --check`. Backend HTTP tests use mocked persistence and cover auth, validation, and malformed JSON. An additional isolated Express smoke check accepted valid gzip JSON, rejected trailing compressed bytes and malformed gzip JSON with HTTP 400, and confirmed the server stayed alive. No real users, orders, or database changes were made.
 
-Pending release and production verification: confirm deployed dependency versions and `/robots.txt` status/MIME/body, then rerun Lighthouse. The [25 October measured baseline](https://pagespeed.web.dev/analysis/https-10x-shop-lasha-vercel-app/zkq2rvamcw?form_factor=mobile) remains mobile **77 / 100 / 100 / 92** and desktop **99 / 100 / 100 / 92** (Performance / Accessibility / Best Practices / SEO). No post-change score or production SEO improvement is claimed.
+Release verification was pending at STEP 016C. The subsequent production checks below supersede that pending status. The audit counts above are the last recorded results, not a fresh 26 October npm audit; the dependency tree is not vulnerability-free.
+
+## Production verification and Lighthouse — 25 October 2026
+
+STEP 016E verified deployment of the responsive assets, robots.txt and favicon. Vercel Ready and Render Live identify commit `24107f8`, which includes security commit `a4812c0`. Render deployment/build evidence supports installation of the patched lockfile; runtime package versions were not directly introspected. The owner reports earlier successful full-stack smoke tests; the read-only production audit did not repeat registration or order creation.
+
+STEP 016D preserved the approved layout, crop, alt text and CSS. The hero remains eager with `fetchPriority="high"`; intrinsic dimensions now match the original 1800×1350 source. A WebP `srcSet`/`sizes` and homepage-only HTML preload use matching candidate rules, with the original JPEG fallback. The collection card reuses the responsive family with its own sizes and lazy loading.
+
+| Asset | Dimensions | Bytes |
+| --- | --- | ---: |
+| Original JPEG | 1800×1350 | 451,751 |
+| WebP 640 | 640×480 | 45,058 |
+| WebP 960 | 960×720 | 83,676 |
+| WebP 1440 | 1440×1080 | 156,094 |
+| WebP 1800 | 1800×1350 | 230,772 |
+
+Production WebP URLs returned HTTP 200 with `image/webp`. At DPR 1, 390px and 1440px viewport checks selected 640px and 960px respectively, matching the preload rules; non-home routes had no hero preload. Local initial-load checks found one selected hero candidate. Production HAR-level duplicate-download counts and DPR 2/3 checks remain unverified. Targeted mobile/desktop checks found no horizontal overflow; they do not constitute a complete device/browser matrix.
+
+Scores are Performance / Accessibility / Best Practices / SEO. All reports below were measured on **25 October 2026**; they are actual lab results, not targets.
+
+| Run | Scores | FCP | LCP | TBT | CLS | Speed Index |
+| --- | --- | --- | --- | --- | --- | --- |
+| Historical mobile baseline | 77 / 100 / 100 / 92 | 2.1s | 5.1s | 10ms | 0 | 4.2s |
+| Fresh mobile | 89 / 100 / 100 / 100 | 2.1s | 3.2s | 0ms | 0 | 4.4s |
+| Repeat mobile | 87 / 100 / 100 / 100 | 2.3s | 3.4s | 0ms | 0 | 4.1s |
+| Historical desktop baseline | 99 / 100 / 100 / 92 | 0.4s | 0.9s | 0ms | 0.002 | 0.4s |
+| Fresh desktop | 100 / 100 / 100 / 100 | 0.4s | 0.4s | 0ms | 0.001 | 0.7s |
+
+Sources: [baseline mobile](https://pagespeed.web.dev/analysis/https-10x-shop-lasha-vercel-app/zkq2rvamcw?form_factor=mobile), [fresh mobile](https://pagespeed.web.dev/analysis/https-10x-shop-lasha-vercel-app/pagsb4hugg?form_factor=mobile), [repeat mobile](https://pagespeed.web.dev/analysis/https-10x-shop-lasha-vercel-app/haamg4ptsk?form_factor=mobile), [fresh desktop](https://pagespeed.web.dev/analysis/https-10x-shop-lasha-vercel-app/pagsb4hugg?form_factor=desktop). Fresh paired run: 22:13:45 GMT+4; mobile repeat: 23:21:40 GMT+4.
+
+The mobile LCP element remained the living-room hero, selecting the 960px WebP (about 81.7 KiB versus the original 441 KiB). Observed mobile LCP fell by 1.7–1.9s; FCP and Speed Index did not consistently improve. These separate production runs are not a controlled experiment or guaranteed future scores; no CrUX field-data result is claimed. Remaining mobile diagnostics include render-blocking CSS, font transfer/critical-chain cost and unused JavaScript. Audit savings estimates are not additive promises or grounds for a redesign before graduation.
+
+Production [robots.txt](https://10x-shop-lasha.vercel.app/robots.txt) now returns plain-text `User-agent: *` and `Allow: /`, rather than the SPA shell. Fresh reports score SEO 100 with no failed scored SEO audits; no rewrite change was needed. Favicon SVG, 32px PNG and Apple touch icon returned successfully; the title remains **10X Shop**. A browser-tab visual check is not recorded here, and existing browser caches may retain an older icon.
+
+Latest implementation validation (STEP 016D): lint, root typecheck/build, **75 frontend tests**, **99 backend tests**, and whitespace checks passed. Those checks were not rerun for STEP 017A's documentation-only changes; no coverage percentage or complete production-flow coverage is claimed. Acceptance gaps are tracked in [REQUIREMENTS.md](REQUIREMENTS.md#final-acceptance-checklist--26-october-2026).

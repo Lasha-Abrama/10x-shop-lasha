@@ -1,17 +1,25 @@
 import { Link } from 'react-router';
 import { FeaturedProducts } from '../components/ProductGrid';
 
+const livingRoomSrcSet = '/images/living-room-640.webp 640w, /images/living-room-960.webp 960w, /images/living-room-1440.webp 1440w, /images/living-room-1800.webp 1800w';
+// Keep the HTML preload in index.html matched to the hero source and sizes.
+const heroSizes = '(min-width: 1440px) 729px, (min-width: 1024px) 50.6vw, (min-width: 500px) 92vw, calc(100vw - 40px)';
+const collectionSizes = '(min-width: 1440px) 421px, (min-width: 768px) calc(30.67vw - 21.33px), (min-width: 500px) 92vw, calc(100vw - 40px)';
+
 type Collection = {
   name: string;
   description: string;
   image: string;
+  srcSet?: string;
+  width: number;
+  height: number;
   alt: string;
 };
 
 const collections: Collection[] = [
-  { name: 'Spaces to settle into', description: 'The home collection', image: '/images/living-room.jpg', alt: 'Warm living room with a neutral sofa and natural wood furniture' },
-  { name: 'Objects with character', description: 'The tabletop collection', image: '/images/ceramics.jpg', alt: 'A collection of ceramic vessels and cups' },
-  { name: 'Everyday companions', description: 'The carry collection', image: '/images/everyday-bag.jpg', alt: 'A simple everyday bag' },
+  { name: 'Spaces to settle into', description: 'The home collection', image: '/images/living-room.jpg', srcSet: livingRoomSrcSet, width: 1800, height: 1350, alt: 'Warm living room with a neutral sofa and natural wood furniture' },
+  { name: 'Objects with character', description: 'The tabletop collection', image: '/images/ceramics.jpg', width: 800, height: 533, alt: 'A collection of ceramic vessels and cups' },
+  { name: 'Everyday companions', description: 'The carry collection', image: '/images/everyday-bag.jpg', width: 800, height: 1200, alt: 'A simple everyday bag' },
 ];
 
 function Arrow() {
@@ -30,7 +38,10 @@ export function HomePage() {
             <p className="mt-12 text-xs text-muted">The 10X Shop collection · A graduation project</p>
           </div>
           <div className="relative min-h-80 sm:min-h-112 lg:min-h-full">
-            <img src="/images/living-room.jpg" alt="A calm, sunlit living space with natural wood and soft neutral furnishings" width="1800" height="1200" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover" />
+            <picture>
+              <source type="image/webp" srcSet={livingRoomSrcSet} sizes={heroSizes} />
+              <img src="/images/living-room.jpg" alt="A calm, sunlit living space with natural wood and soft neutral furnishings" width="1800" height="1350" loading="eager" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover" />
+            </picture>
             <span className="absolute bottom-6 left-6 bg-paper/95 px-4 py-2 text-xs text-ink">A little room for the everyday.</span>
           </div>
         </div>
@@ -48,7 +59,10 @@ export function HomePage() {
         <div className="grid gap-8 md:grid-cols-3">
           {collections.map((collection) => (
             <article key={collection.name}>
-              <img src={collection.image} alt={collection.alt} width="800" height="1000" loading="lazy" className="aspect-[4/3] w-full rounded-editorial bg-sand object-cover" />
+              <picture>
+                {collection.srcSet && <source type="image/webp" srcSet={collection.srcSet} sizes={collectionSizes} />}
+                <img src={collection.image} alt={collection.alt} width={collection.width} height={collection.height} loading="lazy" className="aspect-[4/3] w-full rounded-editorial bg-sand object-cover" />
+              </picture>
               <h3 className="mt-5 font-display text-3xl leading-tight">{collection.name}</h3>
               <p className="mt-2 text-sm text-muted">{collection.description} · Inspiration only</p>
             </article>

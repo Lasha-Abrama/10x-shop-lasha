@@ -11,6 +11,8 @@ Verified on 2026-10-19 against the individual Unsplash photo pages below. Each p
 
 ## Usage terms applying to all four files
 
+`living-room-{640,960,1440,1800}.webp` are proportional derivatives of `living-room.jpg`, generated locally with Sharp (WebP quality 82, effort 6). They retain the same source credit and license; the original JPEG remains the fallback.
+
 The [official Unsplash License](https://unsplash.com/license) grants free commercial and noncommercial use, including downloading, copying, modifying, and distributing photographs. Photographer permission and attribution are not required. These source credits are retained voluntarily; permission comes from the license, not attribution.
 
 Do not sell the images without significant modification or compile them into a similar or competing image service. This storefront uses locally resized photographs as illustrative design previews, not as products for sale. The photograph license does not establish ownership of depicted products or imply endorsement by their creators or photographers.

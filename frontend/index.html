@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="10X Shop graduation e-commerce project." />
+    <script>
+      if (window.location.pathname === '/') {
+        const heroPreload = document.createElement('link');
+        Object.assign(heroPreload, {
+          rel: 'preload', as: 'image', type: 'image/webp', fetchPriority: 'high',
+          imageSrcset: '/images/living-room-640.webp 640w, /images/living-room-960.webp 960w, /images/living-room-1440.webp 1440w, /images/living-room-1800.webp 1800w',
+          imageSizes: '(min-width: 1440px) 729px, (min-width: 1024px) 50.6vw, (min-width: 500px) 92vw, calc(100vw - 40px)',
+        });
+        document.head.append(heroPreload);
+      }
+    </script>
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />

@@ -114,3 +114,19 @@ Next: small CORE corrections, deployment, production QA/Lighthouse, then final l
 - The student must understand and explain the code and limitations during defense; assistance does not replace preparation.
 
 Data/images: DummyJSON. Font/photo provenance: [README credits](README.md#credits-and-defense-notes) and [ASSET-LICENSES.md](frontend/public/images/ASSET-LICENSES.md). This report awaits owner review and post-deployment updates.
+
+## STEP 016C — targeted security and robots correction, 25 October 2026
+
+This dated addendum records local changes after the historical snapshot above; it does not claim deployment or replace earlier measurements.
+
+Only two transitive lockfile entries changed relative to the existing Neon CLI initialization work: `body-parser` **2.3.0 → 2.4.0** and `fast-uri` **3.1.8 → 3.1.9**. Both satisfy their parents' existing ranges. `package.json`, all other lockfile entries, and the Neon changes were preserved. No overrides, major upgrades, or automatic audit fixes were used.
+
+The update removes the body-parser compressed-body denial-of-service advisory ([GHSA-27r3-jxmh-p828](https://github.com/advisories/GHSA-27r3-jxmh-p828)) and four fast-uri parsing advisories: GHSA-w74x-v6f9-j3xg, GHSA-xhq7-xmqj-769h, GHSA-wjr9-j795-jxcr, and GHSA-333x-w4r6-6crp. The body-parser dependency handles backend requests; fast-uri is reached through Prisma tooling rather than application request handlers.
+
+`npm audit` decreased from **3 high / 1 moderate** package entries to **2 high / 0 moderate**. Remaining entries are `multer@2.4.0` and its parent `@nestjs/platform-express@11.2.7`, both reflecting [GHSA-q7qp-rjg7-q26m](https://github.com/advisories/GHSA-q7qp-rjg7-q26m). The checked NestJS 11 adapter release, 11.2.8, still pins Multer 2.4.0; upgrading it would not fix this finding. No upload interceptors or asynchronous file filters were found in the app, so the advisory's required configuration is not currently present. Retain this residual risk and reassess before adding uploads; no downgrade or unsupported override was forced.
+
+`frontend/public/robots.txt` now contains `User-agent: *` and `Allow: /`. Build output matches it exactly; Vite preview serves it as `text/plain`, while checked SPA routes and assets still resolve. The Vercel rewrite is unchanged; the correction adds the missing static file alongside existing public assets.
+
+Validation passed: lint, both workspace typechecks/builds, **73 frontend tests**, **99 backend tests**, and `git diff --check`. Backend HTTP tests use mocked persistence and cover auth, validation, and malformed JSON. An additional isolated Express smoke check accepted valid gzip JSON, rejected trailing compressed bytes and malformed gzip JSON with HTTP 400, and confirmed the server stayed alive. No real users, orders, or database changes were made.
+
+Pending release and production verification: confirm deployed dependency versions and `/robots.txt` status/MIME/body, then rerun Lighthouse. The [25 October measured baseline](https://pagespeed.web.dev/analysis/https-10x-shop-lasha-vercel-app/zkq2rvamcw?form_factor=mobile) remains mobile **77 / 100 / 100 / 92** and desktop **99 / 100 / 100 / 92** (Performance / Accessibility / Best Practices / SEO). No post-change score or production SEO improvement is claimed.

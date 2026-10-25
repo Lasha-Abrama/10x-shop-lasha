@@ -17,3 +17,11 @@ backend/src/generated/prisma/
 .DS_Store
 .idea/
 .vscode/
+/.neon
+/.neon/
+/neon.ts
+/AGENTS.md
+/.agents/
+/.claude/
+/.codex/
+/skills-lock.json

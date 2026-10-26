@@ -76,6 +76,27 @@ async function run() {
   await waitFor(() => Boolean(container?.querySelector('[role="alert"]')));
   check(!container?.textContent?.includes('PRIVATE_FIXTURE'), 'Rejected lazy imports use the same safe boundary');
 
+  render(<Fixture key="menu"><p>Menu keyboard fixture</p></Fixture>);
+  const menuToggle = container?.querySelector<HTMLButtonElement>('button[aria-controls="mobile-navigation"]');
+  const menuLink = container?.querySelector<HTMLAnchorElement>('#mobile-navigation a');
+  check(menuToggle && menuLink, 'The real header exposes a menu toggle and navigation links');
+  flushSync(() => menuToggle.click());
+  check(menuToggle.getAttribute('aria-expanded') === 'true', 'Click opens the mobile menu');
+  flushSync(() => menuToggle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+  check(menuToggle.getAttribute('aria-expanded') === 'false', 'Escape on the Close toggle closes the menu');
+  const toggleVisible = getComputedStyle(menuToggle).display !== 'none';
+  if (toggleVisible) check(document.activeElement === menuToggle, 'Escape on the toggle restores its focus');
+  flushSync(() => menuToggle.click());
+  if (toggleVisible) menuLink.focus();
+  flushSync(() => menuLink.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+  check(menuToggle.getAttribute('aria-expanded') === 'false', 'Escape on a navigation link closes the menu');
+  if (toggleVisible) check(document.activeElement === menuToggle, 'Escape in navigation returns focus to the toggle');
+  flushSync(() => menuToggle.click());
+  flushSync(() => menuToggle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })));
+  check(menuToggle.getAttribute('aria-expanded') === 'true', 'Other keys leave the expanded menu unchanged');
+  flushSync(() => menuToggle.click());
+  check(menuToggle.getAttribute('aria-expanded') === 'false', 'Click still closes the mobile menu');
+
   let titleReads = 0;
   const products: Product[] = [{ id: 1, get title() { titleReads += 1; return 'Memo fixture'; }, category: 'beauty', price: 1, thumbnail: '/images/ceramics.jpg' }];
   render(<MemoryRouter><CartProvider><ProductGrid products={products} /><p>Draft one</p></CartProvider></MemoryRouter>);

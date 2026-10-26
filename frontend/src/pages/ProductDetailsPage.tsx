@@ -39,8 +39,8 @@ function ProductDetailsRequest({ id }: { id: string | undefined }) {
   return (
     <div className="page-width pb-20 pt-10 lg:pb-28 lg:pt-12">
       <nav aria-label="Breadcrumb" className="mb-9 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs leading-5 text-muted">
-        <Link to="/" className="nav-link">Home</Link><span aria-hidden="true">/</span>
-        <Link to="/products" className="nav-link">All products</Link><span aria-hidden="true">/</span>
+        <Link to="/" className="nav-link touch-target">Home</Link><span aria-hidden="true">/</span>
+        <Link to="/products" className="nav-link touch-target">All products</Link><span aria-hidden="true">/</span>
         <span aria-current="page">{state.status === 'success' ? state.product.title : state.status === 'not-found' ? 'Product not found' : 'Product details'}</span>
       </nav>
       {state.status === 'loading' && <div role="status" className="min-h-96 py-16"><h1 className="section-title">A closer look.</h1><p className="mt-5 text-sm text-muted">Loading product details…</p></div>}

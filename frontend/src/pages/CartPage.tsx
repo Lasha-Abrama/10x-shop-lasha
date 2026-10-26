@@ -16,7 +16,7 @@ export function CartPage() {
 
   return (
     <section aria-labelledby="cart-heading" className="page-width pb-20 pt-10 lg:pb-28 lg:pt-16">
-      <nav aria-label="Breadcrumb" className="mb-9 flex gap-3 text-xs text-muted"><Link className="nav-link" to="/">Home</Link><span aria-hidden="true">/</span><span aria-current="page">Your bag</span></nav>
+      <nav aria-label="Breadcrumb" className="mb-9 flex items-center gap-3 text-xs text-muted"><Link className="nav-link touch-target" to="/">Home</Link><span aria-hidden="true">/</span><span aria-current="page">Your bag</span></nav>
       <div className="mb-10 flex flex-wrap items-end justify-between gap-5 border-b border-line pb-8">
         <h1 id="cart-heading" className="section-title">Your bag.</h1>
         <p className="text-sm text-muted">{itemCount} {itemCount === 1 ? 'item' : 'items'}</p>
@@ -67,7 +67,7 @@ function CartLine({ item, onRemove }: { item: CartItem; onRemove: () => void }) 
         {imageFailed ? <span className="px-2 text-center text-xs text-muted">Image unavailable</span> : <img src={item.thumbnail} alt={item.title} width="112" height="112" onError={() => setImageFailed(true)} className="h-full w-full object-contain p-3" />}
       </Link>
       <div className="min-w-0">
-        <h3 className="font-display text-2xl leading-tight wrap-break-word"><Link to={`/products/${item.id}`} className="nav-link">{item.title}</Link></h3>
+        <h3 className="font-display text-2xl leading-tight wrap-break-word"><Link to={`/products/${item.id}`} className="nav-link touch-target">{item.title}</Link></h3>
         <p className="mb-5 mt-2 text-sm text-muted">{formatPrice(item.price)} each</p>
         <QuantitySelector stock={item.stock} quantity={item.quantity} onChange={(quantity) => dispatch({ type: 'setQuantity', id: item.id, quantity })} productTitle={item.title} />
       </div>

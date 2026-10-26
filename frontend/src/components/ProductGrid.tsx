@@ -65,7 +65,7 @@ export function FeaturedProducts() {
 
 // Search drafts rerender the catalog while its current product array stays unchanged.
 export const ProductGrid = memo(function ProductGrid({ products, featured = false }: { products: Product[]; featured?: boolean }) {
-  return <div className={`grid gap-x-7 gap-y-10 ${featured ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
+  return <div className={`grid gap-x-7 gap-y-10 ${featured ? 'sm:grid-cols-3' : 'min-[481px]:grid-cols-2 min-[768px]:grid-cols-3 min-[1025px]:grid-cols-4'}`}>
     {products.map((product) => <ProductCard key={product.id} product={product} />)}
   </div>;
 });

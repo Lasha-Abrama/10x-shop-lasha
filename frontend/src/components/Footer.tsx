@@ -9,10 +9,10 @@ export function Footer() {
           <p className="mt-4 max-w-xs text-sm leading-6 text-muted">A considered collection for the everyday.</p>
         </div>
         <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-8 gap-y-4 text-sm">
-          <Link className="nav-link" to="/products">All products</Link>
-          <Link className="nav-link" to="/#collections">Collections</Link>
-          <Link className="nav-link" to="/#featured">The selected edit</Link>
-          <Link className="nav-link" to="/#perspective">Our perspective</Link>
+          <Link className="nav-link touch-target" to="/products">All products</Link>
+          <Link className="nav-link touch-target" to="/#collections">Collections</Link>
+          <Link className="nav-link touch-target" to="/#featured">The selected edit</Link>
+          <Link className="nav-link touch-target" to="/#perspective">Our perspective</Link>
         </nav>
       </div>
       <div className="page-width flex flex-col justify-between gap-3 border-t border-line py-6 text-xs leading-5 text-muted sm:flex-row">

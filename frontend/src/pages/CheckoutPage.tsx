@@ -92,7 +92,7 @@ function CheckoutSession({ token }: { token: string }) {
   if (cart.items.length === 0) return <Navigate to="/cart" replace state={{ emptyCheckout: true }} />;
 
   return <section className="page-width pb-20 pt-10 lg:pb-28 lg:pt-16">
-    <nav aria-label="Breadcrumb" className="mb-9 flex flex-wrap gap-3 text-xs text-muted"><Link className="nav-link" to="/cart">Your bag</Link><span aria-hidden="true">/</span><span aria-current="page">Checkout</span></nav>
+    <nav aria-label="Breadcrumb" className="mb-9 flex flex-wrap items-center gap-3 text-xs text-muted"><Link className="nav-link touch-target" to="/cart">Your bag</Link><span aria-hidden="true">/</span><span aria-current="page">Checkout</span></nav>
     <div className="mb-10 border-b border-line pb-8"><h1 className="section-title">One last look.</h1><p className="mt-5 max-w-xl text-base leading-7 text-muted">Review your selection, then record your order. This is a demonstration checkout with no payment or shipping.</p></div>
     <form onSubmit={submit} noValidate aria-busy={pending} className="grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16">
       <div className="min-w-0">

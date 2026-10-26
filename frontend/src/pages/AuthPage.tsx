@@ -74,7 +74,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
           <Link to={authPath('login', returnTo)} className="primary-link mt-7">Continue to login</Link>
         </div> : <>
           <h2 className="font-display text-3xl">{isLogin ? 'Login' : 'Create account'}</h2>
-          <p className="mt-3 text-sm leading-6 text-muted">{isLogin ? 'New here? ' : 'Already have an account? '}<Link className="nav-link underline" to={authPath(isLogin ? 'register' : 'login', returnTo)}>{isLogin ? 'Create an account' : 'Login'}</Link></p>
+          <p className="mt-3 text-sm leading-6 text-muted">{isLogin ? 'New here? ' : 'Already have an account? '}<Link className="nav-link touch-target underline" to={authPath(isLogin ? 'register' : 'login', returnTo)}>{isLogin ? 'Create an account' : 'Login'}</Link></p>
           <form noValidate onSubmit={submit} aria-busy={pending} className="mt-8">
             <fieldset disabled={pending} className="space-y-6">
               <legend className="sr-only">{isLogin ? 'Login credentials' : 'Registration details'}</legend>

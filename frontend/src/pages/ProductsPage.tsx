@@ -84,7 +84,7 @@ export function ProductsPage() {
   const unknownCategory = categories.status === 'ready' && query.category !== '' && !categories.data.some((category) => category.slug === query.category);
   return (
     <section aria-labelledby="catalog-heading" className="page-width pb-20 pt-10 lg:pb-28 lg:pt-16">
-      <nav aria-label="Breadcrumb" className="mb-9 flex gap-3 text-xs text-muted"><Link className="nav-link" to="/">Home</Link><span aria-hidden="true">/</span><span aria-current="page">All products</span></nav>
+      <nav aria-label="Breadcrumb" className="mb-9 flex items-center gap-3 text-xs text-muted"><Link className="nav-link touch-target" to="/">Home</Link><span aria-hidden="true">/</span><span aria-current="page">All products</span></nav>
       <div className="mb-9 flex flex-col justify-between gap-5 border-b border-line pb-9 md:flex-row md:items-end">
         <div><h1 id="catalog-heading" className="section-title">The everyday collection.</h1><p className="mt-4 max-w-xl text-sm leading-6 text-muted">Find your everyday essentials and considered pieces for your space.</p></div>
         <p className="max-w-xs text-xs leading-5 text-muted">Live sample data from DummyJSON. This is a graduation project; payments are not available.</p>

@@ -164,3 +164,9 @@ The mobile LCP element remained the living-room hero, selecting the 960px WebP (
 Production [robots.txt](https://10x-shop-lasha.vercel.app/robots.txt) now returns plain-text `User-agent: *` and `Allow: /`, rather than the SPA shell. Fresh reports score SEO 100 with no failed scored SEO audits; no rewrite change was needed. Favicon SVG, 32px PNG and Apple touch icon returned successfully; the title remains **10X Shop**. A browser-tab visual check is not recorded here, and existing browser caches may retain an older icon.
 
 Latest implementation validation (STEP 016D): lint, root typecheck/build, **75 frontend tests**, **99 backend tests**, and whitespace checks passed. Those checks were not rerun for STEP 017A's documentation-only changes; no coverage percentage or complete production-flow coverage is claimed. Acceptance gaps are tracked in [REQUIREMENTS.md](REQUIREMENTS.md#final-acceptance-checklist--26-october-2026).
+
+### Preserved graduation evidence — 28 October 2026
+
+[Historical Lighthouse screenshots](docs/lighthouse/README.md) preserve the 25 October PageSpeed measurements above: mobile performance 77 → 89 (repeat 87), desktop 99 → 100, and SEO 92 → 100. Screenshots were captured on 26 October and copied unchanged during STEP 018G; the current deployed build was not re-benchmarked in STEP 018F/018G.
+
+[Browser QA evidence](docs/qa/README.md) records the 26 October Chrome 155 production guest smoke pass and partial Safari 26.6.2 coverage after STEP 018D. Firefox and human Safari typing remain unverified. Actual DevTools Console/Network screenshots, a Sources breakpoint capture, and React DevTools Components/Profiler captures remain outstanding; the preserved page screenshots do not replace them or establish complete cross-browser certification.

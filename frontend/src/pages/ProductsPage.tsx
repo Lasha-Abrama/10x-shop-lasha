@@ -8,7 +8,7 @@ import type { CatalogQuery } from '../catalog/query';
 import { ProductGrid } from '../components/ProductGrid';
 
 type LoadState<T> = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: T };
-const fieldClass = 'mt-2 min-h-12 w-full rounded-editorial border border-muted bg-paper px-4 py-3 text-sm';
+const fieldClass = 'min-h-12 w-full rounded-editorial border border-muted bg-paper py-3 text-sm';
 
 function CatalogResults({ query }: { query: CatalogQuery }) {
   const [state, setState] = useState<LoadState<ProductsResponse>>({ status: 'loading' });
@@ -23,7 +23,7 @@ function CatalogResults({ query }: { query: CatalogQuery }) {
     return () => controller.abort();
   }, [query, attempt]);
 
-  if (state.status === 'loading') return <p role="status" className="flex min-h-64 items-center justify-center text-sm text-muted">Loading the collection…</p>;
+  if (state.status === 'loading') return <p data-scroll-pending role="status" className="flex min-h-64 items-center justify-center text-sm text-muted">Loading the collection…</p>;
   if (state.status === 'error') return <div className="border-y border-line py-12">
     <h2 className="font-display text-3xl">A brief pause.</h2>
     <p role="alert" className="mt-3 text-sm text-muted">We couldn’t load the collection. Check your connection and try again.</p>
@@ -74,10 +74,6 @@ export function ProductsPage() {
     }).catch(() => { if (!controller.signal.aborted) setCategories({ status: 'error' }); });
     return () => controller.abort();
   }, [attempt]);
-  useEffect(() => {
-    if (location.hash === '#catalog-search') document.getElementById('catalog-search')?.focus();
-  }, [location.hash]);
-
   function update(change: Partial<CatalogQuery>) {
     setParams(catalogParams({ ...query, q: draft.trim(), ...change, page: 1 }));
   }
@@ -87,26 +83,31 @@ export function ProductsPage() {
       <nav aria-label="Breadcrumb" className="mb-9 flex items-center gap-3 text-xs text-muted"><Link className="nav-link touch-target" to="/">Home</Link><span aria-hidden="true">/</span><span aria-current="page">All products</span></nav>
       <div className="mb-9 flex flex-col justify-between gap-5 border-b border-line pb-9 md:flex-row md:items-end">
         <div><h1 id="catalog-heading" className="section-title">The everyday collection.</h1><p className="mt-4 max-w-xl text-sm leading-6 text-muted">Find your everyday essentials and considered pieces for your space.</p></div>
-        <p className="max-w-xs text-xs leading-5 text-muted">Live sample data from DummyJSON. This is a graduation project; payments are not available.</p>
       </div>
       <form role="search" aria-label="Find products" onSubmit={(event) => { event.preventDefault(); update({}); }} className="mb-10">
         <div className="grid gap-5 md:grid-cols-[2fr_1fr_1fr]">
-          <label className="text-sm" htmlFor="catalog-search">Search products<input id="catalog-search" type="search" maxLength={100} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Search by product title" className={`${fieldClass} scroll-mt-28`} /></label>
-          <label className="text-sm">Category<select className={fieldClass} value={query.category} disabled={categories.status !== 'ready'} onChange={(event) => update({ category: event.target.value })}>
+          <label className="text-sm" htmlFor="catalog-search">Search products<input id="catalog-search" type="search" maxLength={100} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Search by product title" className={`${fieldClass} mt-2 px-4 section-anchor`} /></label>
+          <label className="text-sm">Category<span className="select-field"><select className={`${fieldClass} pl-4 pr-12`} value={query.category} disabled={categories.status !== 'ready'} onChange={(event) => update({ category: event.target.value })}>
             <option value="">All products</option>
             {unknownCategory && <option value={query.category}>Unavailable category</option>}
             {categories.status === 'ready' && categories.data.map((category) => <option key={category.slug} value={category.slug}>{category.name}</option>)}
-          </select></label>
-          <label className="text-sm">Sort by<select className={fieldClass} value={query.sort} onChange={(event) => update({ sort: parseCatalogQuery(new URLSearchParams({ sort: event.target.value })).sort })}>
+          </select><SelectChevron /></span></label>
+          <label className="text-sm">Sort by<span className="select-field"><select className={`${fieldClass} pl-4 pr-12`} value={query.sort} onChange={(event) => update({ sort: parseCatalogQuery(new URLSearchParams({ sort: event.target.value })).sort })}>
             {Object.entries(SORT_OPTIONS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select></label>
+          </select><SelectChevron /></span></label>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-x-6 text-xs text-muted"><span>Search updates as you type.</span><button type="button" className="text-link" onClick={() => { setDraft(''); setParams({}); }}>Reset all</button></div>
       </form>
-      {categories.status === 'loading' && <p role="status" className="py-12 text-sm text-muted">Loading categories…</p>}
+      {categories.status === 'loading' && <p data-scroll-pending role="status" className="py-12 text-sm text-muted">Loading categories…</p>}
       {categories.status === 'error' && <div className="py-12"><p role="alert">We couldn’t load categories. Check your connection and try again.</p><button className="text-link mt-4" onClick={() => { setCategories({ status: 'loading' }); setAttempt((value) => value + 1); }}>Retry categories</button></div>}
       {unknownCategory && <div role="alert" className="py-12"><p>This category is unavailable.</p><Link className="text-link mt-4" to="/products">Clear filters</Link></div>}
-      {categories.status === 'ready' && !unknownCategory && <CatalogResults key={canonical} query={query} />}
+      <div id="catalog-results" tabIndex={-1} aria-label="Product results" className="section-anchor">
+        {categories.status === 'ready' && !unknownCategory && <CatalogResults key={canonical} query={query} />}
+      </div>
     </section>
   );
+}
+
+function SelectChevron() {
+  return <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m6 9 6 6 6-6" /></svg>;
 }

@@ -131,6 +131,25 @@ test('cancellation is forwarded and does not become a misleading network error',
   await assert.rejects(authenticate(credentials, controller.signal, base), { name: 'AbortError' });
 });
 
+test('timeouts before headers and during JSON have distinct messaging without swallowing caller cancellation', async (context) => {
+  const timeout = new DOMException('Timed out', 'TimeoutError');
+  const mock = context.mock.method(globalThis, 'fetch', async () => { throw timeout; });
+  for (const request of [authenticate, registerAccount]) {
+    await assert.rejects(request(credentials, signal(), base), /took too long to respond/);
+  }
+  mock.mock.mockImplementation(async () => ({ ok: true, json: async () => { throw timeout; } }));
+  await assert.rejects(registerAccount(credentials, signal(), base), /took too long to respond/);
+  const expired = new AbortController();
+  expired.abort(timeout);
+  context.mock.method(AbortSignal, 'timeout', () => expired.signal);
+  mock.mock.mockImplementation(async () => ({ ok: true, json: async () => { throw new DOMException('Body aborted', 'AbortError'); } }));
+  await assert.rejects(registerAccount(credentials, signal(), base), /took too long to respond/);
+  const controller = new AbortController();
+  controller.abort();
+  mock.mock.mockImplementation(async (_url, options) => { options.signal.throwIfAborted(); });
+  await assert.rejects(registerAccount(credentials, controller.signal, base), { name: 'AbortError' });
+});
+
 test('auth reducer protects guests, handles pending/login/logout, and rejects expired sessions', (context) => {
   let now = 1000;
   context.mock.method(Date, 'now', () => now);

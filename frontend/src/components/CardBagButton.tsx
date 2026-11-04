@@ -31,7 +31,7 @@ export function CardBagButton({ productId, title }: { productId: number; title: 
         return;
       }
       dispatch(action);
-      setFeedback('1 item added to your bag. Current price and stock checked.');
+      setFeedback('1 item added to your bag. Catalog price and quantity checked.');
     } catch {
       if (!controller.signal.aborted) setFeedback('Couldn’t check this product. Your bag is unchanged. Please try again.');
     } finally {

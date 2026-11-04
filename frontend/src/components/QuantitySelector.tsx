@@ -24,7 +24,7 @@ export function QuantitySelector({ stock, quantity, onChange, productTitle }: Qu
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M3 8h10M8 3v10" /></svg>
         </button>
       </div>
-      <p className="mt-3 text-xs text-muted">Up to {stock} available.</p>
+      <p className="mt-3 text-xs text-muted">Maximum quantity: {stock}.</p>
     </fieldset>
   );
 }

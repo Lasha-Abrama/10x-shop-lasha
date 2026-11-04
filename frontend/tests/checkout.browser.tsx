@@ -9,6 +9,7 @@ import { CartProvider, useCart } from '../src/cart/CartContext';
 import { CheckoutPage } from '../src/pages/CheckoutPage';
 import { CartPage } from '../src/pages/CartPage';
 import { AuthPage } from '../src/pages/AuthPage';
+import { AccountPage } from '../src/pages/AccountPage';
 import { ProductCard } from '../src/components/ProductCard';
 import { Layout } from '../src/components/Layout';
 import '../src/styles.css';
@@ -99,6 +100,7 @@ function render(signedIn = true, filled = true, path = '/checkout') {
   flushSync(() => root.render(<MemoryRouter key={++fixture} initialEntries={[path]}><AuthProvider><CartProvider>
     <Setup signedIn={signedIn} filled={filled}><Probe /><Routes><Route element={<Layout />}>
       <Route path="checkout" element={<CheckoutPage />} /><Route path="cart" element={<CartPage />} />
+      <Route path="account" element={<AccountPage />} />
       <Route path="login" element={<AuthPage mode="login" />} /><Route path="products" element={<section className="page-width py-12"><h1 className="section-title">The collection.</h1><div className="mt-8 max-w-80"><ProductCard product={product} /></div></section>} />
     </Route></Routes></Setup>
   </CartProvider></AuthProvider></MemoryRouter>));
@@ -143,7 +145,7 @@ async function run() {
   await waitFor(() => Boolean(container?.textContent?.includes('Order recorded.')));
   check(itemCount() === '0', 'Confirmed success clears the bag and stays on confirmation');
   check(JSON.stringify(payload) === '{"items":[{"productId":1,"quantity":1}]}', 'Order payload contains only product ID and quantity, never form details or prices');
-  check(container?.textContent?.includes('$10.99') && container?.textContent?.includes('Pending payment'), 'Confirmation uses authoritative server total and pending status');
+  check(container?.textContent?.includes('$10.99') && container?.textContent?.includes('Recorded · unpaid'), 'Confirmation uses authoritative server total and truthful unpaid status');
   check(container?.textContent?.includes('Test Student') && container?.textContent?.includes('not sent to the server'), 'Confirmation shows the transient form details with a clear disclosure');
   check(![...memory.values()].some((value) => value.includes('Test Student') || value.includes('12 Sample Street') || value.includes('fixture.payload')), 'Form details and auth tokens are not persisted');
 
@@ -168,8 +170,10 @@ async function run() {
   detailFailure = true; add(); await waitFor(() => Boolean(container?.textContent?.includes('Couldn’t check this product')));
   check(itemCount() === '2', 'Catalog failure leaves the bag intact');
   check(Boolean(container?.querySelector('a[href="/products"][aria-current="page"]')), 'Catalog navigation exposes the active page');
-  container?.querySelectorAll<HTMLButtonElement>('header button').forEach((button) => { if (button.textContent === 'Logout') flushSync(() => button.click()); });
-  await waitFor(() => !container?.textContent?.includes(user.email));
+  flushSync(() => container?.querySelector<HTMLAnchorElement>('header a[href="/account"]')?.click());
+  await waitFor(() => Boolean(container?.textContent?.includes('Account details')));
+  container?.querySelectorAll<HTMLButtonElement>('main button').forEach((button) => { if (button.textContent === 'Logout') flushSync(() => button.click()); });
+  await waitFor(() => Boolean(container?.querySelector('header a[href="/login"]')) && container?.querySelector('output')?.getAttribute('data-route') === '/products');
   check(itemCount() === '2' && container?.querySelector('output')?.getAttribute('data-route') === '/products', 'Logout returns to the catalog without clearing the bag');
 
   render(true, true, '/cart');

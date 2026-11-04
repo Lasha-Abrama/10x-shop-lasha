@@ -47,9 +47,9 @@ export function CartPage() {
           <aside aria-labelledby="summary-heading" className="rounded-editorial bg-surface p-7 sm:p-8">
             <h2 id="summary-heading" className="font-display text-3xl">A considered selection.</h2>
             <dl className="my-7 border-y border-line py-5"><div className="flex justify-between gap-4"><dt>Subtotal</dt><dd className="tabular-nums">{formatPrice(subtotal)}</dd></div></dl>
-            <p className="text-xs leading-6 text-muted">Prices in USD. Shipping and taxes are not calculated. This bag uses sample product data.</p>
+            <p className="text-xs leading-6 text-muted">Prices in USD. Your total is confirmed at checkout. Shipping and taxes are not calculated.</p>
             <Link to="/checkout" className="primary-link mt-6 min-h-14 w-full" aria-describedby="checkout-status">Continue to checkout</Link>
-            <p id="checkout-status" className="mt-3 text-xs leading-5 text-muted">Sign in to record a demonstration order. The server confirms final prices; payments are not available.</p>
+            <p id="checkout-status" className="mt-3 text-xs leading-5 text-muted">Log in to record your selection. No payment is collected.</p>
           </aside>
         </div>
       )}

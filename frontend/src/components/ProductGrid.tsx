@@ -34,7 +34,12 @@ export function FeaturedProducts() {
   }, [attempt]);
 
   if (state.status === 'loading') {
-    return <div role="status" className="flex min-h-64 items-center justify-center text-sm text-muted">Loading the collection…</div>;
+    return <div data-scroll-pending role="status">
+      <p className="mb-7 text-xs text-muted">Loading the collection…</p>
+      <div aria-hidden="true" className="grid gap-x-7 gap-y-10 sm:grid-cols-3">
+        {[0, 1, 2].map((item) => <div key={item}><div className="aspect-[4/5] rounded-editorial bg-sand" /><div className="min-h-48" /></div>)}
+      </div>
+    </div>;
   }
 
   if (state.status === 'error') {
@@ -57,7 +62,7 @@ export function FeaturedProducts() {
 
   return (
     <>
-      <p role="status" className="mb-7 text-xs text-muted">Showing {products.length} of {state.data.total} sample products · Prices in USD</p>
+      <p role="status" className="mb-7 text-xs text-muted">Showing {products.length} of {state.data.total} products · Prices in USD</p>
       <ProductGrid products={products} featured />
     </>
   );

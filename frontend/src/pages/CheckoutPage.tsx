@@ -74,10 +74,10 @@ function CheckoutSession({ token }: { token: string }) {
 
   if (submission.kind === 'confirmed') return <section className="page-width pb-20 pt-12 sm:pt-16 lg:pb-28">
     <h1 ref={heading} tabIndex={-1} className="section-title">Order recorded.</h1>
-    <p role="status" className="mb-10 mt-5 max-w-xl text-base leading-7 text-muted">Your demonstration order is saved. The final total below comes from the server; no payment has been taken.</p>
+    <p role="status" className="mb-10 mt-5 max-w-xl text-base leading-7 text-muted">Your order has been recorded. No payment was taken.</p>
     <OrderSummary order={submission.order} />
     <section aria-labelledby="demo-details" className="mt-10 border-t border-line pt-8">
-      <h2 id="demo-details" className="font-display text-3xl">Your demonstration details.</h2>
+      <h2 id="demo-details" className="font-display text-3xl">Your details.</h2>
       <p className="mt-3 max-w-xl text-sm leading-7 text-muted">Shown only in this confirmation. These details were not sent to the server or saved. No shipping is arranged.</p>
       <dl className="mt-5 grid gap-5 text-sm sm:grid-cols-2">
         <div><dt className="text-muted">Full name</dt><dd className="mt-1 wrap-anywhere">{submission.details.fullName}</dd></div>
@@ -93,12 +93,12 @@ function CheckoutSession({ token }: { token: string }) {
 
   return <section className="page-width pb-20 pt-10 lg:pb-28 lg:pt-16">
     <nav aria-label="Breadcrumb" className="mb-9 flex flex-wrap items-center gap-3 text-xs text-muted"><Link className="nav-link touch-target" to="/cart">Your bag</Link><span aria-hidden="true">/</span><span aria-current="page">Checkout</span></nav>
-    <div className="mb-10 border-b border-line pb-8"><h1 className="section-title">One last look.</h1><p className="mt-5 max-w-xl text-base leading-7 text-muted">Review your selection, then record your order. This is a demonstration checkout with no payment or shipping.</p></div>
+    <div className="mb-10 border-b border-line pb-8"><h1 className="section-title">One last look.</h1><p className="mt-5 max-w-xl text-base leading-7 text-muted">This checkout records a sample order. No payment is collected, and no shipping or stock reservation is arranged.</p></div>
     <form onSubmit={submit} noValidate aria-busy={pending} className="grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16">
       <div className="min-w-0">
         <fieldset disabled={pending || (submission.kind === 'error' && submission.uncertain)} aria-describedby="details-note" className="mb-12">
           <legend className="font-display text-3xl">Your details.</legend>
-          <p id="details-note" className="mb-6 mt-4 max-w-xl text-sm leading-7 text-muted">All fields are required for this graduation-project form. Use sample details: they stay on this page, are not saved, and will not be used for shipping.</p>
+          <p id="details-note" className="mb-6 mt-4 max-w-xl text-sm leading-7 text-muted">All fields are required. Use sample details: they stay on this page, are not saved, and will not be used for shipping.</p>
           <div className="grid gap-6 sm:grid-cols-2">
             {([
               { name: 'fullName', label: 'Full name', autoComplete: 'name', maxLength: 100 },
@@ -123,9 +123,9 @@ function CheckoutSession({ token }: { token: string }) {
       <aside className="rounded-editorial bg-surface p-7 sm:p-8" aria-labelledby="checkout-summary">
         <h2 id="checkout-summary" className="font-display text-3xl">Your order estimate.</h2>
         <dl className="my-7 border-y border-line py-5"><div className="flex flex-wrap justify-between gap-3"><dt>Estimated subtotal</dt><dd className="tabular-nums wrap-anywhere">{formatPrice(getCartTotals(cart).subtotal)}</dd></div></dl>
-        <p id="estimate-note" className="text-sm leading-7 text-muted">Bag prices are an estimate. The server checks current product prices and stock and determines the final total, which may differ.</p>
+        <p id="estimate-note" className="text-sm leading-7 text-muted">Bag prices are an estimate. Catalog prices and quantity limits are checked before your order is recorded. The final total may differ.</p>
         <div className="mt-6">
-          <button type="submit" disabled={pending || Boolean(validation) || (submission.kind === 'error' && submission.uncertain)} aria-describedby="estimate-note order-note" className="primary-link min-h-14 w-full disabled:cursor-wait disabled:opacity-60">{pending ? 'Recording your order…' : 'Place demonstration order'}</button>
+          <button type="submit" disabled={pending || Boolean(validation) || (submission.kind === 'error' && submission.uncertain)} aria-describedby="estimate-note order-note" className="primary-link min-h-14 w-full disabled:cursor-wait disabled:opacity-60">{pending ? 'Recording your order…' : 'Record sample order'}</button>
           <p id="order-note" className="mt-4 text-xs leading-6 text-muted">No payment is collected. Keep this page open until confirmation. If interrupted, check order history before trying again.</p>
           {validation && <p role="alert" className="mt-5 text-sm leading-6">{validation}</p>}
           {pending && <p role="status" className="mt-5 text-sm leading-6">Checking the catalog and recording your selection…</p>}

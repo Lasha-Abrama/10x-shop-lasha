@@ -8,6 +8,7 @@ export type AuthUser = {
 export type Credentials = { email: string; password: string };
 export type AuthSession = { user: AuthUser; token: string; expiresAt: number };
 export const REGISTRATION_ACK = 'Registration request processed. You can try signing in.';
+const timeoutMessage = 'The account service took too long to respond. Please try again.';
 
 export class AuthApiError extends Error {
   readonly status: number | undefined;
@@ -51,14 +52,18 @@ function invalidResponse(): AuthApiError {
 }
 
 async function request(path: string, signal: AbortSignal, options: RequestInit, baseUrl?: string): Promise<unknown> {
+  const timeout = AbortSignal.timeout(15_000);
   let response: Response;
   try {
     response = await fetch(`${getApiBaseUrl(baseUrl)}${path}`, {
-      ...options, signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
+      ...options, signal: AbortSignal.any([signal, timeout]),
       credentials: 'omit', cache: 'no-store', redirect: 'error',
     });
   } catch (error: unknown) {
     if (signal.aborted || error instanceof AuthApiError) throw error;
+    if (timeout.aborted || (error instanceof DOMException && error.name === 'TimeoutError')) {
+      throw new AuthApiError(timeoutMessage);
+    }
     throw new AuthApiError('We couldn’t connect to the account service. Check your connection and try again.');
   }
   if (!response.ok) {
@@ -69,7 +74,11 @@ async function request(path: string, signal: AbortSignal, options: RequestInit, 
     throw new AuthApiError(message, response.status);
   }
   try { return await response.json(); }
-  catch (error: unknown) { if (signal.aborted) throw error; throw invalidResponse(); }
+  catch (error: unknown) {
+    if (signal.aborted) throw error;
+    if (timeout.aborted || (error instanceof DOMException && error.name === 'TimeoutError')) throw new AuthApiError(timeoutMessage);
+    throw invalidResponse();
+  }
 }
 
 function credentialsRequest(credentials: Credentials): RequestInit {

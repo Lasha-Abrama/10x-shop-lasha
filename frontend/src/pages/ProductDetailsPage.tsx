@@ -43,7 +43,7 @@ function ProductDetailsRequest({ id }: { id: string | undefined }) {
         <Link to="/products" className="nav-link touch-target">All products</Link><span aria-hidden="true">/</span>
         <span aria-current="page">{state.status === 'success' ? state.product.title : state.status === 'not-found' ? 'Product not found' : 'Product details'}</span>
       </nav>
-      {state.status === 'loading' && <div role="status" className="min-h-96 py-16"><h1 className="section-title">A closer look.</h1><p className="mt-5 text-sm text-muted">Loading product details…</p></div>}
+      {state.status === 'loading' && <div data-scroll-pending role="status" className="min-h-96 py-16"><h1 className="section-title">A closer look.</h1><p className="mt-5 text-sm text-muted">Loading product details…</p></div>}
       {state.status === 'not-found' && <section role="status" className="min-h-80 py-12"><h1 className="section-title">Product not found.</h1><p className="mt-5 max-w-lg text-sm leading-6 text-muted">This product doesn’t exist or is no longer available. There’s more to discover in the collection.</p></section>}
       {state.status === 'error' && <section className="min-h-80 py-12"><div role="alert"><h1 className="section-title">A brief pause.</h1><p className="mt-5 max-w-lg text-sm leading-6 text-muted">{state.message}</p></div><button type="button" className="primary-link mt-6" onClick={() => { setState({ status: 'loading' }); setAttempt((value) => value + 1); }}>Try again</button></section>}
       {state.status === 'success' && <ProductDetailsContent product={state.product} />}
@@ -71,11 +71,7 @@ function ProductDetailsContent({ product }: { product: ProductDetails }) {
   }
 
   const attributes = [
-    ['Availability', product.availabilityStatus],
     ['Product code', product.sku],
-    ['Shipping', product.shippingInformation],
-    ['Warranty', product.warrantyInformation],
-    ['Returns', product.returnPolicy],
     ['Supplier minimum order', product.minimumOrderQuantity?.toString()],
   ];
 
@@ -89,13 +85,13 @@ function ProductDetailsContent({ product }: { product: ProductDetails }) {
         <p className="mt-7 text-2xl tabular-nums">{formatPrice(product.price)} <span className="text-xs text-muted">USD</span></p>
         <p className="mt-6 max-w-prose text-base leading-7 text-muted">{product.description}</p>
         <div className="my-8 border-y border-line py-6">
-          <p className="mb-5 text-sm font-medium">{product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}</p>
+          <p className="mb-5 text-sm font-medium">{product.stock > 0 ? `Catalog quantity: ${product.stock}` : 'Out of stock'}</p>
           <QuantitySelector stock={product.stock} quantity={quantity} onChange={setQuantity} productTitle={product.title} />
           {inBag > 0 && <p className="mt-3 text-xs text-muted">{inBag} already in your bag.{remaining === 0 && ' Stock limit reached.'}</p>}
           <button type="button" disabled={remaining === 0} onClick={addToBag} className="primary-link mt-6 min-h-14 w-full disabled:cursor-not-allowed disabled:opacity-50" aria-describedby="bag-availability">{product.stock === 0 ? 'Out of stock' : remaining === 0 ? 'Stock limit reached' : 'Add to Bag'}</button>
           <p role="status" aria-live="polite" className="mt-3 text-sm leading-6 text-accent">{feedback}</p>
           {feedback && <Link to="/cart" className="text-link mt-2 inline-flex text-sm">View your bag</Link>}
-          <p id="bag-availability" className="mt-3 text-xs leading-5 text-muted">Sample product data from DummyJSON. Payments are not available.</p>
+          <p id="bag-availability" className="mt-3 text-xs leading-5 text-muted">Catalog quantities set the bag limit; adding an item does not reserve stock.</p>
         </div>
         <h2 className="font-display text-2xl">The details.</h2>
         <dl className="mt-4 divide-y divide-line text-sm">

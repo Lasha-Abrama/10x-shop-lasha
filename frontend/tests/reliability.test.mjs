@@ -81,6 +81,20 @@ test('shared route loading fallback announces loading without an animated spinne
   assert.match(markup, /Loading your page/);
 });
 
+test('guest header has one login before the bag and keeps registration on the auth page', async () => {
+  const { Header } = await server.ssrLoadModule('/src/components/Header.tsx');
+  const { AuthProvider } = await server.ssrLoadModule('/src/auth/AuthContext.tsx');
+  const { CartProvider } = await server.ssrLoadModule('/src/cart/CartContext.tsx');
+  const { MemoryRouter } = await import('react-router');
+  const html = renderToStaticMarkup(createElement(MemoryRouter, null,
+    createElement(AuthProvider, null, createElement(CartProvider, null, createElement(Header)))));
+  assert.equal((html.match(/href="\/login"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /href="\/register"/);
+  assert.ok(html.indexOf('aria-label="Search products"') < html.indexOf('href="/login"'));
+  assert.ok(html.indexOf('href="/login"') < html.indexOf('href="/cart"'));
+  assert.match(html, /Log in/);
+});
+
 test('real lazy route preserves the shell while pending and resolves to the protected guest view', async () => {
   const { App } = await server.ssrLoadModule('/src/App.tsx');
   const { AuthProvider } = await server.ssrLoadModule('/src/auth/AuthContext.tsx');

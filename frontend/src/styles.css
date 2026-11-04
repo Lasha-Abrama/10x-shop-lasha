@@ -49,12 +49,23 @@
   .nav-link:hover { color: var(--color-accent); text-decoration: underline; }
   .primary-link { display: inline-flex; align-items: center; justify-content: space-between; gap: 2rem; min-height: 3.25rem; padding: 0.875rem 1.25rem; border-radius: var(--radius-editorial); background: var(--color-ink); color: var(--color-paper); font-size: 0.875rem; transition: background-color 180ms ease-out; }
   .primary-link:hover { background: var(--color-accent); }
+  .primary-link > svg { flex-shrink: 0; }
+  .select-field { position: relative; display: block; margin-top: 0.5rem; }
+  .select-field select { appearance: none; }
+  .select-field > svg { position: absolute; top: 50%; right: 1rem; width: 1.25rem; height: 1.25rem; transform: translateY(-50%); pointer-events: none; }
+  .select-field:has(select:disabled) > svg { opacity: 0.4; }
+  .section-anchor { scroll-margin-top: 2rem; }
   .text-link { display: inline-flex; min-width: 2.75rem; min-height: 2.75rem; align-items: center; text-decoration: underline; text-underline-offset: 6px; }
   .text-link:hover { color: var(--color-accent); }
   .future-action { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.75rem; color: var(--color-muted); font-size: 0.875rem; cursor: not-allowed; }
   .soon-label { font-size: 0.625rem; line-height: 1; }
   .skip-link { position: fixed; top: 1rem; left: 1rem; z-index: 50; transform: translateY(-200%); padding: 0.875rem 1.25rem; background: var(--color-ink); color: var(--color-paper); }
   .skip-link:focus { transform: translateY(0); }
+}
+
+@media (forced-colors: active) {
+  .select-field select { appearance: auto; padding-right: 1rem; }
+  .select-field > svg { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

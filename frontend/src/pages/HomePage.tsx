@@ -23,7 +23,7 @@ const collections: Collection[] = [
 ];
 
 function Arrow() {
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" /></svg>;
+  return <svg className="shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" /></svg>;
 }
 
 export function HomePage() {
@@ -35,7 +35,6 @@ export function HomePage() {
             <h1 id="hero-heading" className="max-w-lg font-display text-[clamp(3.5rem,6.5vw,6rem)] leading-[0.98] tracking-[-0.025em]">Less, but<br />more considered.</h1>
             <p className="mt-7 max-w-sm text-base leading-7 text-muted">Objects for your space. Essentials for your day. A fresh perspective on the things you choose to live with.</p>
             <Link className="primary-link mt-9 self-start" to="/products">Explore all products <Arrow /></Link>
-            <p className="mt-12 text-xs text-muted">The 10X Shop collection · A graduation project</p>
           </div>
           <div className="relative min-h-80 sm:min-h-112 lg:min-h-full">
             <picture>
@@ -47,11 +46,11 @@ export function HomePage() {
         </div>
         <div className="flex flex-wrap justify-between gap-3 border-b border-line py-5 text-xs leading-5 text-muted">
           <p>Thoughtful forms. Everyday possibilities.</p>
-          <p>A storefront in the making — take a look around.</p>
+          <p>Explore the collection at your own pace.</p>
         </div>
       </section>
 
-      <section id="collections" aria-labelledby="collections-heading" className="page-width scroll-mt-8 pb-20 pt-6 lg:pb-28">
+      <section id="collections" aria-labelledby="collections-heading" className="page-width section-anchor pb-20 pt-6 lg:pb-28">
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <h2 id="collections-heading" className="section-title">Find your everyday.</h2>
           <p className="max-w-xs text-sm leading-6 text-muted">Three inspirations for everyday living. These mood studies are not shoppable categories.</p>
@@ -71,7 +70,7 @@ export function HomePage() {
         <Link to="/products" className="text-link mt-7 inline-flex items-center gap-4">Explore all products <Arrow /></Link>
       </section>
 
-      <section id="featured" aria-labelledby="featured-heading" className="border-y border-line bg-surface py-16 lg:py-20">
+      <section id="featured" aria-labelledby="featured-heading" className="section-anchor border-y border-line bg-surface py-16 lg:py-20">
         <div className="page-width">
           <div className="mb-9 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
             <div>
@@ -84,12 +83,12 @@ export function HomePage() {
         </div>
       </section>
 
-      <section id="perspective" aria-labelledby="perspective-heading" className="page-width grid scroll-mt-8 gap-8 py-20 md:grid-cols-[1fr_1.2fr] md:gap-20 lg:py-28">
+      <section id="perspective" aria-labelledby="perspective-heading" className="page-width section-anchor grid gap-8 pb-20 pt-8 md:grid-cols-[1fr_1.2fr] md:gap-20 lg:pb-28 lg:pt-8">
         <h2 id="perspective-heading" className="section-title max-w-md">Good things.<br />A little more thought.</h2>
         <div className="max-w-xl md:pt-2">
           <p className="font-display text-3xl leading-snug sm:text-4xl">We believe the everyday deserves a second look.</p>
-          <p className="mt-5 text-base leading-7 text-muted">10X Shop is a graduation project exploring a more considered way to shop. This first collection is a visual study in useful objects, natural tones, and the spaces we call our own.</p>
-          <a href="#collections" className="text-link mt-7 inline-flex items-center gap-4">Back to the collections <Arrow /></a>
+          <p className="mt-5 text-base leading-7 text-muted">Explore useful objects, natural tones, and everyday essentials. Start with a familiar favorite or find something that brings a fresh perspective to your space.</p>
+          <Link to="/#collections" className="text-link mt-7 inline-flex items-center gap-4">Back to the collections <svg className="shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M12 20V4m-6 6 6-6 6 6" /></svg></Link>
         </div>
       </section>
     </>

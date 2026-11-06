@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { catalogParams, parseCatalogQuery, scheduleCatalogSearch } from '../src/catalog/query.ts';
+import { catalogParams, parseCatalogQuery, scheduleCatalogSearch, SORT_OPTIONS } from '../src/catalog/query.ts';
 import { catalogUrl, getCatalogPage, getCategories, parseCategories } from '../src/api/catalog.ts';
 
 const defaults = { q: '', category: '', sort: 'default', page: 1 };
@@ -31,6 +31,51 @@ test('query construction keeps ordinary pages server-paginated and fetches compl
     if (query.sort !== 'default') {
       assert.equal(url.searchParams.get('sortBy'), query.sort.split('-')[0]);
       assert.equal(url.searchParams.get('order'), query.sort.split('-')[1]);
+    }
+  }
+});
+
+test('all five sort options round trip through shared URLs and target every endpoint correctly', () => {
+  assert.deepEqual(SORT_OPTIONS, {
+    default: 'Default', 'price-asc': 'Price: low to high', 'price-desc': 'Price: high to low',
+    'rating-desc': 'Rating: high to low', 'title-asc': 'Name A–Z',
+  });
+  for (const sort of Object.keys(SORT_OPTIONS)) {
+    for (const change of [{}, { category: 'beauty' }, { q: 'eye', category: 'beauty' }]) {
+      const query = { ...defaults, ...change, sort, page: 2 };
+      assert.deepEqual(parseCatalogQuery(new URLSearchParams(catalogParams(query).toString())), query);
+      const url = new URL(catalogUrl(query));
+      assert.equal(url.searchParams.get('sortBy'), sort === 'default' ? null : sort.split('-')[0]);
+      assert.equal(url.searchParams.get('order'), sort === 'default' ? null : sort.split('-')[1]);
+      assert.equal(url.searchParams.get('limit'), query.q ? '0' : '12');
+      assert.equal(url.searchParams.get('skip'), query.q ? '0' : '12');
+    }
+  }
+});
+
+test('Name A–Z uses global upstream sorting before category/search filtering and pagination', async (context) => {
+  const all = Array.from({ length: 30 }, (_, i) => ({ ...product(i + 1, i % 2 ? 'fragrances' : 'beauty'), title: `Eye ${String(30 - i).padStart(2, '0')}` }));
+  const glasses = { ...product(99, 'sunglasses'), title: 'Green and Black Glasses' };
+  context.mock.method(globalThis, 'fetch', async (input) => {
+    const url = new URL(input);
+    assert.equal(url.searchParams.get('sortBy'), 'title');
+    assert.equal(url.searchParams.get('order'), 'asc');
+    const category = url.pathname.startsWith('/products/category/') ? url.pathname.split('/').at(-1) : '';
+    const sorted = [...all, glasses].filter((p) => !category || p.category === category).sort((a, b) => a.title.localeCompare(b.title));
+    const search = url.pathname === '/products/search';
+    assert.equal(url.searchParams.get('limit'), search ? '0' : '12');
+    const skip = Number(url.searchParams.get('skip'));
+    return Response.json({ products: search ? sorted : sorted.slice(skip, skip + 12), total: sorted.length, skip, limit: search ? sorted.length : 12 });
+  });
+  for (const q of ['', 'eye', 'EYE']) {
+    for (const category of ['', 'beauty']) {
+      const ids = Array.from({ length: 30 }, (_, i) => 30 - i).filter((id) => !category || id % 2 === 1);
+      if (!q && !category) ids.push(99);
+      for (const page of [1, 2, 3]) {
+        const result = await getCatalogPage({ q, category, sort: 'title-asc', page }, new AbortController().signal);
+        assert.equal(result.total, ids.length);
+        assert.deepEqual(result.products.map((p) => p.id), ids.slice((page - 1) * 12, page * 12));
+      }
     }
   }
 });
@@ -146,19 +191,21 @@ test('a delayed response is ignored after abort, even if fetch ignores the signa
   }
 });
 
-test('search waits 300ms and cancels outdated input or navigation', (context) => {
+test('search waits exactly 400ms and cancels outdated input or navigation', (context) => {
   context.mock.timers.enable({ apis: ['setTimeout'] });
   const values = [];
   const cancel = scheduleCatalogSearch(() => values.push('old'));
   context.mock.timers.tick(200);
   cancel();
   scheduleCatalogSearch(() => values.push('new'));
-  context.mock.timers.tick(299);
+  context.mock.timers.tick(300);
+  assert.deepEqual(values, []);
+  context.mock.timers.tick(99);
   assert.deepEqual(values, []);
   context.mock.timers.tick(1);
   assert.deepEqual(values, ['new']);
   const navigate = scheduleCatalogSearch(() => values.push('stale'));
   navigate();
-  context.mock.timers.tick(300);
+  context.mock.timers.tick(400);
   assert.deepEqual(values, ['new']);
 });

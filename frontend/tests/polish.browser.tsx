@@ -1,7 +1,7 @@
 // Development-only browser checks. Every API response and storage operation is mocked.
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { MemoryRouter, useNavigate } from 'react-router';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router';
 import { App } from '../src/App';
 import { AuthProvider } from '../src/auth/AuthContext';
 import { CartProvider } from '../src/cart/CartContext';
@@ -38,7 +38,8 @@ function fill(id: string, value: string) {
 }
 function HistoryControls() {
   const navigate = useNavigate();
-  return <div className="sr-only"><button id="fixture-back" onClick={() => void navigate(-1)}>Fixture back</button><button id="fixture-forward" onClick={() => void navigate(1)}>Fixture forward</button></div>;
+  const current = useLocation();
+  return <div className="sr-only"><output id="fixture-query">{current.search}</output><button id="fixture-back" onClick={() => void navigate(-1)}>Fixture back</button><button id="fixture-forward" onClick={() => void navigate(1)}>Fixture forward</button></div>;
 }
 
 async function child() {
@@ -59,10 +60,12 @@ async function child() {
       await new Promise((resolve) => setTimeout(resolve, delay));
       const skip = Number(url.searchParams.get('skip') ?? 0);
       const limit = url.searchParams.get('limit') === '0' ? 24 : 12;
-      return Response.json({ total: 24, skip, limit, products: Array.from({ length: limit }, (_, i) => ({
-        id: skip + i + 1, title: `Considered piece ${skip + i + 1}`, category: 'beauty', price: 12.5, rating: 4,
+      const products = Array.from({ length: 24 }, (_, i) => ({
+        id: i + 1, title: `Considered piece ${i + 1}`, category: 'beauty', price: 12.5, rating: 4,
         thumbnail: `${location.origin}/images/ceramics.jpg`,
-      })) });
+      }));
+      if (url.searchParams.get('sortBy') === 'title' && url.searchParams.get('order') === 'asc') products.sort((a, b) => a.title.localeCompare(b.title));
+      return Response.json({ total: 24, skip, limit, products: products.slice(skip, skip + limit) });
     }
     throw new Error('Unexpected fixture request; external fetch is disabled');
   };
@@ -88,6 +91,29 @@ async function child() {
   }
   if (preview) return;
   if (width === 375) {
+    const sort = document.querySelectorAll<HTMLSelectElement>('select')[1];
+    const selectedSort = () => sort.value;
+    check(JSON.stringify([...sort.options].map((option) => option.value)) === '["default","price-asc","price-desc","rating-desc","title-asc"]', 'All five typed sort options are available');
+    const ids = () => [...document.querySelectorAll<HTMLAnchorElement>('article a')].map((a) => Number(a.pathname.split('/').at(-1)));
+    const query = () => document.getElementById('fixture-query')?.textContent ?? '';
+    click('nav[aria-label="Product pages"] a:last-child');
+    await waitFor(() => ids()[0] === 13);
+    sort.value = 'title-asc';
+    flushSync(() => sort.dispatchEvent(new Event('change', { bubbles: true })));
+    await waitFor(() => ids().at(-1) === 2);
+    check(query() === '?sort=title-asc' && JSON.stringify(ids()) === '[1,10,11,12,13,14,15,16,17,18,19,2]', 'Name A–Z resets page two and uses global alphabetical order');
+    click('nav[aria-label="Product pages"] a:last-child');
+    await waitFor(() => ids()[0] === 20);
+    check(query() === '?sort=title-asc&page=2' && JSON.stringify(ids()) === '[20,21,22,23,24,3,4,5,6,7,8,9]', 'Alphabetical pagination preserves sort and includes the remaining products');
+    click('#fixture-back');
+    await waitFor(() => ids().at(-1) === 2);
+    check(selectedSort() === 'title-asc' && query() === '?sort=title-asc', 'Back restores the alphabetical first page and select state');
+    click('#fixture-forward');
+    await waitFor(() => ids()[0] === 20);
+    check(selectedSort() === 'title-asc' && query() === '?sort=title-asc&page=2', 'Forward restores the alphabetical second page and URL');
+    click('form[role="search"] button[type="button"]');
+    await waitFor(() => ids()[0] === 1 && ids().at(-1) === 12);
+    check(selectedSort() === 'default' && query() === '', 'Reset restores the normal catalog and default sort');
     const menu = header.querySelector<HTMLButtonElement>('[aria-controls="mobile-navigation"]')!;
     flushSync(() => menu.click());
     flushSync(() => menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
@@ -96,8 +122,7 @@ async function child() {
     window.scrollTo({ top: 400, behavior: 'instant' });
     await new Promise((resolve) => setTimeout(resolve, 50));
     fill('catalog-search', 'piece');
-    await waitFor(() => Boolean(document.querySelector('article')) && location.hash === '');
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await waitFor(() => query() === '?q=piece' && Boolean(document.querySelector('article')));
     check(Math.abs(window.scrollY - 400) < 5 && document.activeElement?.id !== 'catalog-results', 'Typing keeps scroll position');
     click('nav[aria-label="Product pages"] a:last-child');
     await waitFor(() => document.activeElement?.id === 'catalog-results');

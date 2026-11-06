@@ -1,9 +1,10 @@
 export const PAGE_SIZE = 12;
 export const SORT_OPTIONS = {
-  default: 'Catalog order',
+  default: 'Default',
   'price-asc': 'Price: low to high',
   'price-desc': 'Price: high to low',
-  'rating-desc': 'Top rated',
+  'rating-desc': 'Rating: high to low',
+  'title-asc': 'Name A–Z',
 } as const;
 export type CatalogSort = keyof typeof SORT_OPTIONS;
 export type CatalogQuery = { q: string; category: string; sort: CatalogSort; page: number };
@@ -31,6 +32,6 @@ export function catalogParams(query: CatalogQuery): URLSearchParams {
 
 // Each new input or navigation cancels the previous scheduled URL update.
 export function scheduleCatalogSearch(update: () => void): () => void {
-  const timer = setTimeout(update, 300);
+  const timer = setTimeout(update, 400);
   return () => clearTimeout(timer);
 }

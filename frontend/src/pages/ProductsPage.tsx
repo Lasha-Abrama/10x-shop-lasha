@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router';
 import { getCatalogPage, getCategories } from '../api/catalog';
 import type { Category } from '../api/catalog';
@@ -56,6 +56,7 @@ export function ProductsPage() {
   const query = useMemo(() => parseCatalogQuery(params), [params]);
   const canonical = catalogParams(query).toString();
   const [draft, setDraft] = useState(() => parseCatalogQuery(params).q);
+  const cancelSearch = useRef<(() => void) | null>(null);
   const [categories, setCategories] = useState<LoadState<Category[]>>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
 
@@ -65,7 +66,12 @@ export function ProductsPage() {
   }, [params, canonical, setParams]);
   useEffect(() => {
     if (draft.trim() === query.q) return;
-    return scheduleCatalogSearch(() => setParams(catalogParams({ ...query, q: draft.trim(), page: 1 }), { replace: true }));
+    const cancel = scheduleCatalogSearch(() => setParams(catalogParams({ ...query, q: draft.trim(), page: 1 }), { replace: true }));
+    cancelSearch.current = cancel;
+    return () => {
+      cancel();
+      if (cancelSearch.current === cancel) cancelSearch.current = null;
+    };
   }, [draft, query, location.key, setParams]);
   useEffect(() => {
     const controller = new AbortController();
@@ -87,7 +93,11 @@ export function ProductsPage() {
       <form role="search" aria-label="Find products" onSubmit={(event) => { event.preventDefault(); update({}); }} className="mb-10">
         <div className="grid gap-5 md:grid-cols-[2fr_1fr_1fr]">
           <label className="text-sm" htmlFor="catalog-search">Search products<input id="catalog-search" type="search" maxLength={100} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Search by product title" className={`${fieldClass} mt-2 px-4 section-anchor`} /></label>
-          <label className="text-sm">Category<span className="select-field"><select className={`${fieldClass} pl-4 pr-12`} value={query.category} disabled={categories.status !== 'ready'} onChange={(event) => update({ category: event.target.value })}>
+          <label className="text-sm">Category<span className="select-field"><select className={`${fieldClass} pl-4 pr-12`} value={query.category} disabled={categories.status !== 'ready'} onChange={(event) => {
+            cancelSearch.current?.();
+            setDraft('');
+            update({ category: event.target.value, q: '' });
+          }}>
             <option value="">All products</option>
             {unknownCategory && <option value={query.category}>Unavailable category</option>}
             {categories.status === 'ready' && categories.data.map((category) => <option key={category.slug} value={category.slug}>{category.name}</option>)}

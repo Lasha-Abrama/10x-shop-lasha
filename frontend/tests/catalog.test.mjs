@@ -7,7 +7,7 @@ const defaults = { q: '', category: '', sort: 'default', page: 1 };
 const product = (id, category = 'beauty', price = id) => ({ id, title: `Product ${id}`, category, price, rating: 5 - id / 100, thumbnail: 'https://example.com/product.webp' });
 
 test('URL state round trips search, category, sorting and pagination', () => {
-  const query = { q: 'red lipstick', category: 'beauty', sort: 'price-desc', page: 3 };
+  const query = { q: 'red lipstick', category: '', sort: 'price-desc', page: 3 };
   assert.deepEqual(parseCatalogQuery(catalogParams(query)), query);
   assert.equal(catalogParams(defaults).toString(), '');
   for (const page of ['0', '-1', '1.2', 'Infinity', '999999999', '01']) {
@@ -15,6 +15,18 @@ test('URL state round trips search, category, sorting and pagination', () => {
   }
   assert.deepEqual(parseCatalogQuery(new URLSearchParams('sort=__proto__&category=../../x&page=NaN')), defaults);
   assert.equal(parseCatalogQuery(new URLSearchParams({ q: 'x'.repeat(120) })).q.length, 100);
+});
+
+test('legacy combined URLs canonically prefer trimmed nonempty search without a history loop', () => {
+  const legacy = new URLSearchParams('category=beauty&q=%20EYE%20&sort=title-asc&page=2');
+  const query = parseCatalogQuery(legacy);
+  assert.deepEqual(query, { q: 'EYE', category: '', sort: 'title-asc', page: 2 });
+  const canonical = catalogParams(query).toString();
+  assert.equal(canonical, 'q=EYE&sort=title-asc&page=2');
+  assert.equal(catalogParams(parseCatalogQuery(new URLSearchParams(canonical))).toString(), canonical);
+  assert.equal(catalogParams({ ...query, category: 'beauty' }).toString(), canonical);
+  assert.deepEqual(parseCatalogQuery(new URLSearchParams('q=%20%20&category=beauty')), { ...defaults, category: 'beauty' });
+  assert.equal(catalogParams({ ...defaults, q: '  ', category: 'beauty' }).toString(), 'category=beauty');
 });
 
 test('query construction keeps ordinary pages server-paginated and fetches complete search candidates', () => {
@@ -41,7 +53,7 @@ test('all five sort options round trip through shared URLs and target every endp
     'rating-desc': 'Rating: high to low', 'title-asc': 'Name A–Z',
   });
   for (const sort of Object.keys(SORT_OPTIONS)) {
-    for (const change of [{}, { category: 'beauty' }, { q: 'eye', category: 'beauty' }]) {
+    for (const change of [{}, { category: 'beauty' }, { q: 'eye' }]) {
       const query = { ...defaults, ...change, sort, page: 2 };
       assert.deepEqual(parseCatalogQuery(new URLSearchParams(catalogParams(query).toString())), query);
       const url = new URL(catalogUrl(query));
@@ -69,7 +81,7 @@ test('Name A–Z uses global upstream sorting before category/search filtering a
   });
   for (const q of ['', 'eye', 'EYE']) {
     for (const category of ['', 'beauty']) {
-      const ids = Array.from({ length: 30 }, (_, i) => 30 - i).filter((id) => !category || id % 2 === 1);
+      const ids = Array.from({ length: 30 }, (_, i) => 30 - i).filter((id) => q || !category || id % 2 === 1);
       if (!q && !category) ids.push(99);
       for (const page of [1, 2, 3]) {
         const result = await getCatalogPage({ q, category, sort: 'title-asc', page }, new AbortController().signal);
@@ -87,7 +99,7 @@ test('loads the complete dynamic category list and rejects malformed or duplicat
   for (const invalid of [null, [], [{}], [{ slug: '../x', name: 'X' }], [source[0], source[0]]]) assert.throws(() => parseCategories(invalid));
 });
 
-test('combined search/category filters the entire sorted result set before paginating', async (context) => {
+test('search wins over a legacy category and paginates the entire sorted search result', async (context) => {
   const all = Array.from({ length: 40 }, (_, index) => product(40 - index, index % 2 ? 'beauty' : 'fragrances'));
   context.mock.method(globalThis, 'fetch', async (input) => {
     const url = new URL(input);
@@ -99,9 +111,9 @@ test('combined search/category filters the entire sorted result set before pagin
     return Response.json({ products: all, total: 40, skip: 0, limit: 40 });
   });
   const page = await getCatalogPage({ q: 'product', category: 'beauty', sort: 'price-desc', page: 2 }, new AbortController().signal);
-  assert.equal(page.total, 20);
-  assert.deepEqual(page.products.map((item) => item.id), all.filter((item) => item.category === 'beauty').slice(12).map((item) => item.id));
-  assert.ok(page.products.every((item) => item.category === 'beauty'));
+  assert.equal(page.total, 40);
+  assert.deepEqual(page.products.map((item) => item.id), all.slice(12, 24).map((item) => item.id));
+  assert.ok(page.products.some((item) => item.category === 'fragrances'));
   assert.ok(page.products.every((item, index) => !index || page.products[index - 1].price >= item.price));
 });
 
@@ -123,7 +135,7 @@ test('search matches title substrings only, ignoring case and surrounding query 
     const result = await getCatalogPage({ ...defaults, q }, new AbortController().signal);
     assert.deepEqual(result, { products: [eyeshadow], total: 1, skip: 0, limit: 12 });
   }
-  assert.equal((await getCatalogPage({ ...defaults, q: 'eye', category: 'sunglasses' }, new AbortController().signal)).total, 0);
+  assert.equal((await getCatalogPage({ ...defaults, q: 'eye', category: 'sunglasses' }, new AbortController().signal)).total, 1);
   assert.equal((await getCatalogPage({ ...defaults, q: 'eye', category: 'beauty' }, new AbortController().signal)).total, 1);
   assert.equal((await getCatalogPage({ ...defaults, q: 'no title match' }, new AbortController().signal)).total, 0);
 });

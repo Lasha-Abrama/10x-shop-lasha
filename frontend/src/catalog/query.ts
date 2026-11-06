@@ -10,12 +10,14 @@ export type CatalogSort = keyof typeof SORT_OPTIONS;
 export type CatalogQuery = { q: string; category: string; sort: CatalogSort; page: number };
 
 export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
+  const q = (params.get('q') ?? '').trim().slice(0, 100);
   const category = params.get('category') ?? '';
   const sort = params.get('sort') ?? '';
   const page = params.get('page') ?? '1';
   return {
-    q: (params.get('q') ?? '').trim().slice(0, 100),
-    category: /^[a-z]+(?:-[a-z]+)*$/.test(category) && category.length <= 60 ? category : '',
+    q,
+    // Nonempty search wins for legacy URLs containing both modes.
+    category: !q && /^[a-z]+(?:-[a-z]+)*$/.test(category) && category.length <= 60 ? category : '',
     sort: Object.hasOwn(SORT_OPTIONS, sort) ? sort as CatalogSort : 'default',
     page: /^[1-9]\d{0,5}$/.test(page) ? Number(page) : 1,
   };
@@ -23,8 +25,9 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
 
 export function catalogParams(query: CatalogQuery): URLSearchParams {
   const params = new URLSearchParams();
-  if (query.q) params.set('q', query.q);
-  if (query.category) params.set('category', query.category);
+  const q = query.q.trim();
+  if (q) params.set('q', q);
+  else if (query.category) params.set('category', query.category);
   if (query.sort !== 'default') params.set('sort', query.sort);
   if (query.page > 1) params.set('page', String(query.page));
   return params;

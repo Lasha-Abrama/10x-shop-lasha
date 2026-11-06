@@ -1,7 +1,7 @@
 // Development-only: real BrowserRouter/native history with isolated fetch and storage mocks.
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { BrowserRouter } from 'react-router';
+import { BrowserRouter, Link } from 'react-router';
 import { App } from '../src/App';
 import { AuthProvider } from '../src/auth/AuthContext';
 import { CartProvider } from '../src/cart/CartContext';
@@ -38,6 +38,11 @@ function fill(id: string, value: string) {
   flushSync(() => input.dispatchEvent(new Event('input', { bubbles: true })));
 }
 const ready = () => Boolean(document.querySelector('main')) && !document.querySelector('main [data-scroll-pending]');
+function choose(index: number, value: string) {
+  const select = document.querySelectorAll<HTMLSelectElement>('select')[index];
+  select.value = value;
+  flushSync(() => select.dispatchEvent(new Event('change', { bubbles: true })));
+}
 const atSavedPosition = () => Math.abs(scrollY - 900) < 5;
 const orderListReady = () => ready() && document.querySelector('h1')?.textContent === 'Your orders.';
 const orderDetailReady = () => ready() && document.querySelector('h1')?.textContent === 'Your order.';
@@ -61,6 +66,7 @@ let orderFailure = false;
 let aborted = 0;
 let holdProduct = false;
 let releaseProduct = () => {};
+const catalogRequests: string[] = [];
 async function delay(signal: AbortSignal | null | undefined) {
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => { signal?.removeEventListener('abort', cancel); resolve(); }, 300);
@@ -87,8 +93,10 @@ window.fetch = async (input, options) => {
     return Response.json(url.pathname === '/orders' ? Array.from({ length: 12 }, (_, i) => ({ ...order, id: uuid(i + 1) })) : order);
   }
   if (url.pathname.startsWith('/products')) {
+    catalogRequests.push(url.pathname);
     const skip = Number(url.searchParams.get('skip') ?? 0);
-    return Response.json({ products: Array.from({ length: 12 }, (_, i) => ({ ...product, id: skip + i + 1 })), total: 24, skip, limit: 12 });
+    const limit = url.searchParams.get('limit') === '0' ? 24 : 12;
+    return Response.json({ products: Array.from({ length: limit }, (_, i) => ({ ...product, id: skip + i + 1 })), total: 24, skip, limit });
   }
   throw new Error('Unexpected request blocked by fixture');
 };
@@ -131,11 +139,62 @@ function focusChecks() {
 
 async function run() {
   history.replaceState(null, '', '/products');
-  root.render(<BrowserRouter><AuthProvider><CartProvider><App /></CartProvider></AuthProvider></BrowserRouter>);
+  root.render(<BrowserRouter><AuthProvider><CartProvider><Link className="sr-only" id="legacy-catalog" to="/products?q=history&category=beauty&sort=title-asc&page=2">Legacy catalog</Link><App /></CartProvider></AuthProvider></BrowserRouter>);
   await waitFor(() => ready() && Boolean(document.querySelector('article')) && document.fonts.status === 'loaded');
   check(scrollY === 0, 'Initial navigation starts at the top');
   if (keyboardOnly) return;
   focusChecks();
+
+  const searchInput = () => document.querySelector<HTMLInputElement>('#catalog-search')?.value;
+  const categoryValue = () => document.querySelector<HTMLSelectElement>('select')?.value;
+  const categoryUrl = '?category=beauty&sort=title-asc';
+  choose(1, 'title-asc');
+  await waitFor(() => ready() && location.search === '?sort=title-asc');
+  choose(0, 'beauty');
+  await waitFor(() => ready() && location.search === categoryUrl);
+  click('nav[aria-label="Product pages"] a:last-child');
+  await waitFor(() => ready() && location.search.endsWith('page=2'));
+  fill('catalog-search', 'history');
+  check(searchInput() === 'history' && categoryValue() === 'beauty', 'Draft search updates immediately while the category remains active during debounce');
+  await waitFor(() => ready() && location.search === '?q=history&sort=title-asc');
+  check(categoryValue() === '' && catalogRequests.at(-1) === '/products/search', 'Debounced search clears category, resets page and preserves sorting');
+  click('nav[aria-label="Product pages"] a:last-child');
+  await waitFor(() => ready() && location.search === '?q=history&sort=title-asc&page=2');
+  fill('catalog-search', 'stale');
+  choose(0, 'beauty');
+  await waitFor(() => ready() && location.search === categoryUrl);
+  const requests = catalogRequests.length;
+  await pause(450);
+  check(searchInput() === '' && location.search === categoryUrl && catalogRequests.length === requests && catalogRequests.at(-1) === '/products/category/beauty', 'Category clears search, resets page and cancels pending debounce without another request');
+  history.back();
+  await waitFor(() => ready() && location.search === '?q=history&sort=title-asc&page=2');
+  check(searchInput() === 'history' && categoryValue() === '', 'Native Back restores search input, mode, sorting and page');
+  history.forward();
+  await waitFor(() => ready() && location.search === categoryUrl);
+  check(searchInput() === '' && categoryValue() === 'beauty', 'Native Forward restores category mode and clears visible search');
+  fill('catalog-search', 'cancel even on the same category URL');
+  choose(0, 'beauty');
+  await pause(450);
+  check(location.search === categoryUrl && searchInput() === '', 'Reselecting the active category also cancels a pending search');
+  for (let cycle = 0; cycle < 2; cycle += 1) {
+    fill('catalog-search', 'history');
+    await waitFor(() => ready() && location.search === '?q=history&sort=title-asc');
+    choose(0, 'beauty');
+    await waitFor(() => ready() && location.search === categoryUrl);
+    check(searchInput() === '' && categoryValue() === 'beauty', `Repeated mode switch ${cycle + 1} remains exclusive`);
+  }
+  const historyLength = history.length;
+  click('#legacy-catalog');
+  await waitFor(() => ready() && location.search === '?q=history&sort=title-asc&page=2');
+  await pause(450);
+  check(searchInput() === 'history' && categoryValue() === '' && history.length === historyLength + 1, 'Legacy combined URL prefers search, preserves sort/page and replaces without history loops');
+  history.back();
+  await waitFor(() => ready() && location.search === categoryUrl);
+  history.forward();
+  await waitFor(() => ready() && location.search === '?q=history&sort=title-asc&page=2');
+  check(searchInput() === 'history' && categoryValue() === '', 'Native history retains the canonical legacy destination');
+  click('form[role="search"] button[type="button"]');
+  await waitFor(() => ready() && location.search === '');
 
   click('article a');
   await waitFor(() => ready() && Boolean(document.querySelector('#product-title')));

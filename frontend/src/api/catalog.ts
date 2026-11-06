@@ -53,8 +53,7 @@ export async function getCatalogPage(query: CatalogQuery, signal: AbortSignal): 
     if (data.skip !== 0 || data.products.length !== data.total) {
       throw new Error('The catalog returned incomplete search results. Please try again.');
     }
-    const matches = data.products.filter((product) => product.title.toLowerCase().includes(search)
-      && (!query.category || product.category === query.category));
+    const matches = data.products.filter((product) => product.title.toLowerCase().includes(search));
     return { products: matches.slice(skip, skip + PAGE_SIZE), total: matches.length, skip, limit: PAGE_SIZE };
   }
   if (data.skip !== skip || data.products.length > PAGE_SIZE

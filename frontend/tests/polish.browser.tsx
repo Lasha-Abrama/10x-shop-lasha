@@ -115,8 +115,10 @@ async function child() {
     check(window.scrollY === 0, 'Forward restores login position');
     fill('auth-email', user.email); fill('auth-password', 'mock only password phrase');
     document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await waitFor(() => Boolean(document.querySelector('header a[href="/account"]')) && Boolean(document.querySelector('main button')));
+    await waitFor(() => Boolean(document.querySelector('header a[href="/account"]')) && Boolean(document.querySelector('article')));
     check(!header.querySelector('a[href="/login"]') && header.textContent?.includes('Account'), 'Mock login changes the single header control to Account');
+    click('header a[href="/account"]');
+    await waitFor(() => Boolean(document.querySelector('main a[href="/orders"]')));
     click('main a[href="/orders"]');
     await waitFor(() => Boolean(document.querySelector('h1')) && document.querySelector('h1')?.textContent === 'Your orders.');
     click('header a[href="/account"]');

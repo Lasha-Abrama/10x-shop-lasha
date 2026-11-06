@@ -16,8 +16,17 @@ const order = { id, status: 'PENDING_PAYMENT', currency: 'USD', totalCents: 2468
 const cart = { items: [{ id: 1, title: 'Browser snapshot', price: 9.99, stock: 99, quantity: 2, thumbnail: 'https://example.com/1.png' }] };
 const items = [{ productId: 1, quantity: 2 }];
 
-test('safe guest return destinations survive login/registration but never redirect outside known routes', () => {
-  for (const destination of ['/checkout', '/orders', '/account', `/orders/${id}`]) {
+test('independent login and registration links default to the catalog', () => {
+  assert.equal(safeReturnTo(null), '/products');
+  assert.equal(safeReturnTo(''), '/products');
+  assert.equal(authPath('login', '/products'), '/login');
+  assert.equal(authPath('register', '/products'), '/register');
+});
+
+test('checkout and other explicit safe returns survive login/registration links', () => {
+  assert.equal(authPath('login', '/checkout'), '/login?returnTo=%2Fcheckout');
+  assert.equal(authPath('login', '/account'), '/login?returnTo=%2Faccount');
+  for (const destination of ['/products', '/checkout', '/orders', '/account', `/orders/${id}`]) {
     assert.equal(safeReturnTo(destination), destination);
     for (const mode of ['login', 'register']) {
       const link = new URL(authPath(mode, destination), 'http://localhost:5173');
@@ -26,9 +35,12 @@ test('safe guest return destinations survive login/registration but never redire
       assert.equal(safeReturnTo(link.searchParams.get('returnTo')), destination);
     }
   }
-  for (const destination of [null, '', 'https://evil.example', '//evil.example', '/\\evil.example', '/checkout?token=secret',
+});
+
+test('unsafe returns fall back to the catalog rather than allowing an external or arbitrary redirect', () => {
+  for (const destination of [null, '', 'https://evil.example', '//evil.example', '/\\evil.example', 'javascript:alert(1)', '/checkout?token=secret',
     '/checkout#hash', '/orders/../login', '/admin', '/orders/not-a-uuid', '/%2F%2Fevil.example']) {
-    assert.equal(safeReturnTo(destination), '/account');
+    assert.equal(safeReturnTo(destination), '/products');
     assert.equal(authPath('login', destination), '/login');
   }
 });

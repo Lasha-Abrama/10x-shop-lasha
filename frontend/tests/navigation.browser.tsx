@@ -164,12 +164,15 @@ async function run() {
   check(aborted > beforeAbort && location.pathname === '/login', 'Navigation cancels pending product loading without a stale update');
   fill('auth-email', user.email); fill('auth-password', 'mock only password phrase');
   document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-  await waitFor(() => location.pathname === '/account' && ready());
+  await waitFor(() => location.pathname === '/products' && ready() && Boolean(document.querySelector('article')));
+  check(true, 'Independent mocked login returns to the catalog');
+  click('header a[href="/account"]');
+  await waitFor(() => location.pathname === '/account' && ready() && Boolean(document.querySelector('main a[href="/orders"]')));
   click('main a[href="/orders"]');
   await waitFor(orderListReady);
   await savePosition();
   history.back();
-  await waitFor(() => location.pathname === '/account' && ready());
+  await waitFor(() => location.pathname === '/account' && ready() && Boolean(document.querySelector('main a[href="/orders"]')));
   history.forward();
   await waitFor(() => Boolean(document.querySelector('main [data-scroll-pending]')));
   await waitFor(() => orderListReady() && atSavedPosition());

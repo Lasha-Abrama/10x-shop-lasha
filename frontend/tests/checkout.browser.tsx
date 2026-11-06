@@ -116,6 +116,18 @@ function submit() { flushSync(() => container?.querySelector('form')?.dispatchEv
 const itemCount = () => container?.querySelector('output')?.getAttribute('data-items');
 
 async function run() {
+  for (const { path, destination, message } of [
+    { path: '/login', destination: '/products', message: 'Independent mocked login returns to the catalog and preserves the bag' },
+    { path: '/login?returnTo=https%3A%2F%2Fevil.example', destination: '/products', message: 'Unsafe external return falls back to the catalog and preserves the bag' },
+    { path: '/login?returnTo=%2Faccount', destination: '/account', message: 'Explicit safe Account return is preserved after mocked login' },
+  ]) {
+    render(false, true, path);
+    await waitFor(() => Boolean(container?.querySelector('input[name="password"]')));
+    fill('email', user.email); fill('password', 'not-a-real-password'); submit();
+    await waitFor(() => container?.querySelector('output')?.getAttribute('data-route') === destination);
+    check(itemCount() === '1', message);
+  }
+
   render(false);
   await waitFor(() => Boolean(container?.querySelector('input[name="password"]')));
   check(container?.querySelector('output')?.getAttribute('data-route') === '/login?returnTo=%2Fcheckout', 'Guest checkout redirects to login with a safe return path');

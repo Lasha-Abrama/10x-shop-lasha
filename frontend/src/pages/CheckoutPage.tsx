@@ -74,7 +74,7 @@ function CheckoutSession({ token }: { token: string }) {
 
   if (submission.kind === 'confirmed') return <section className="page-width pb-20 pt-12 sm:pt-16 lg:pb-28">
     <h1 ref={heading} tabIndex={-1} className="section-title">Order recorded.</h1>
-    <p role="status" className="mb-10 mt-5 max-w-xl text-base leading-7 text-muted">Your order has been recorded. No payment was taken.</p>
+    <p role="status" className="mb-10 mt-5 max-w-xl text-base leading-7 text-muted">Thank you! Your order has been placed. No payment was taken.</p>
     <OrderSummary order={submission.order} />
     <section aria-labelledby="demo-details" className="mt-10 border-t border-line pt-8">
       <h2 id="demo-details" className="font-display text-3xl">Your details.</h2>

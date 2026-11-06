@@ -10,13 +10,14 @@ test('checkout accepts valid controlled-form values, including surrounding white
   assert.deepEqual(validateCheckoutDetails({ ...details, fullName: 'ანა', city: 'თბილისი' }), {});
 });
 
-test('checkout requires all four fields with useful field-specific errors', () => {
+test('checkout requires all four fields with the exact Annex P5.2 messages', () => {
   const errors = validateCheckoutDetails({ fullName: ' ', email: '', address: '', city: ' ' });
-  assert.deepEqual(Object.keys(errors), ['fullName', 'email', 'address', 'city']);
-  assert.match(errors.fullName, /full name/);
-  assert.match(errors.email, /email/);
-  assert.match(errors.address, /address/);
-  assert.match(errors.city, /city/);
+  assert.deepEqual(errors, {
+    fullName: 'Full name must be at least 3 characters',
+    email: 'Please enter a valid email address',
+    address: 'Address must be at least 5 characters',
+    city: 'City is required',
+  });
 });
 
 test('checkout validates name/address lengths, email shape and bounded input', () => {

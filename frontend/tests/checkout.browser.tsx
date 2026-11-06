@@ -11,6 +11,7 @@ import { CartPage } from '../src/pages/CartPage';
 import { AuthPage } from '../src/pages/AuthPage';
 import { AccountPage } from '../src/pages/AccountPage';
 import { ProductCard } from '../src/components/ProductCard';
+import { ProductDetailsPage } from '../src/pages/ProductDetailsPage';
 import { Layout } from '../src/components/Layout';
 import '../src/styles.css';
 
@@ -101,6 +102,7 @@ function render(signedIn = true, filled = true, path = '/checkout') {
     <Setup signedIn={signedIn} filled={filled}><Probe /><Routes><Route element={<Layout />}>
       <Route path="checkout" element={<CheckoutPage />} /><Route path="cart" element={<CartPage />} />
       <Route path="account" element={<AccountPage />} />
+      <Route path="products/:id" element={<ProductDetailsPage />} />
       <Route path="login" element={<AuthPage mode="login" />} /><Route path="products" element={<section className="page-width py-12"><h1 className="section-title">The collection.</h1><div className="mt-8 max-w-80"><ProductCard product={product} /></div></section>} />
     </Route></Routes></Setup>
   </CartProvider></AuthProvider></MemoryRouter>));
@@ -116,6 +118,19 @@ function submit() { flushSync(() => container?.querySelector('form')?.dispatchEv
 const itemCount = () => container?.querySelector('output')?.getAttribute('data-items');
 
 async function run() {
+  for (const [quantity, label] of [[6, 'In stock'], [5, 'Only 5 left!'], [1, 'Only 1 left!'], [0, 'Out of stock']] as const) {
+    stock = quantity;
+    render(false, false, '/products/1');
+    await waitFor(() => Boolean(container?.querySelector('#product-title')));
+    const section = container?.querySelector('#product-title')?.parentElement;
+    const status = [...(section?.querySelectorAll('p') ?? [])].find((paragraph) => paragraph.textContent === label);
+    check(Boolean(status) && (quantity === 0 ? status?.classList.contains('text-red-700') : quantity <= 5 ? status?.classList.contains('text-orange-700') : true), `Stock ${quantity} shows the Annex label and color: ${label}`);
+    const addButton = section?.querySelector<HTMLButtonElement>('button[aria-describedby="bag-availability"]');
+    check(addButton?.disabled === (quantity === 0) && Boolean(section?.textContent?.includes('does not reserve stock')) && (quantity === 0 ? !section?.querySelector('fieldset') : section?.textContent?.includes(`Maximum quantity: ${quantity}.`)), `Stock ${quantity} preserves quantity availability and the no-reservation disclosure`);
+  }
+  stock = 2;
+  detailRequests = 0;
+
   for (const { path, destination, message } of [
     { path: '/login', destination: '/products', message: 'Independent mocked login returns to the catalog and preserves the bag' },
     { path: '/login?returnTo=https%3A%2F%2Fevil.example', destination: '/products', message: 'Unsafe external return falls back to the catalog and preserves the bag' },
@@ -132,6 +147,7 @@ async function run() {
   await waitFor(() => Boolean(container?.querySelector('input[name="password"]')));
   check(container?.querySelector('output')?.getAttribute('data-route') === '/login?returnTo=%2Fcheckout', 'Guest checkout redirects to login with a safe return path');
   check(itemCount() === '1', 'Guest redirect preserves the bag');
+  check(container?.querySelector('header a[href="/cart"]')?.getAttribute('aria-label') === 'Shopping bag, 1 item' && container?.querySelector('header a[href="/cart"] [aria-live]')?.textContent === '1', 'Positive cart badge and accessible count are preserved');
   fill('email', user.email); fill('password', 'not-a-real-password'); submit();
   await waitFor(() => Boolean(container?.querySelector('#fullName')));
   check(container?.querySelector('output')?.getAttribute('data-route') === '/checkout', 'Successful mocked sign-in returns to checkout');
@@ -139,6 +155,7 @@ async function run() {
   render(true, false);
   await waitFor(() => Boolean(container?.textContent?.includes('Room for something good.')));
   check(container?.textContent?.includes('before checking out'), 'Empty checkout redirects to the bag with feedback');
+  check(container?.querySelector('header a[href="/cart"]')?.getAttribute('aria-label') === 'Shopping bag, 0 items' && !container?.querySelector('header a[href="/cart"] [aria-live]'), 'Empty cart hides the numeric badge while preserving its accessible name');
 
   render();
   await waitFor(() => Boolean(container?.querySelector('#fullName')));
@@ -158,6 +175,7 @@ async function run() {
   check(itemCount() === '0', 'Confirmed success clears the bag and stays on confirmation');
   check(JSON.stringify(payload) === '{"items":[{"productId":1,"quantity":1}]}', 'Order payload contains only product ID and quantity, never form details or prices');
   check(container?.textContent?.includes('$10.99') && container?.textContent?.includes('Recorded · unpaid'), 'Confirmation uses authoritative server total and truthful unpaid status');
+  check(container?.textContent?.includes('Thank you! Your order has been placed.') && container?.textContent?.includes('No payment was taken.') && container?.textContent?.includes('No shipping or stock reservation is arranged.'), 'Annex thank-you wording preserves all payment, shipping and reservation disclosures');
   check(container?.textContent?.includes('Test Student') && container?.textContent?.includes('not sent to the server'), 'Confirmation shows the transient form details with a clear disclosure');
   check(![...memory.values()].some((value) => value.includes('Test Student') || value.includes('12 Sample Street') || value.includes('fixture.payload')), 'Form details and auth tokens are not persisted');
 
@@ -191,6 +209,8 @@ async function run() {
   render(true, true, '/cart');
   const clearButton = () => [...(container?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((button) => button.textContent === 'Clear bag');
   await waitFor(() => Boolean(clearButton()));
+  const totals = [...(container?.querySelectorAll('aside[aria-labelledby="summary-heading"] dl > div') ?? [])].map((row) => [row.querySelector('dt')?.textContent, row.querySelector('dd')?.textContent]);
+  check(JSON.stringify(totals) === '[["Subtotal","$9.99"],["Estimated total","$9.99"]]', 'Cart subtotal and estimated total use the same accurate item sum without invented charges');
   const originalConfirm = window.confirm;
   let confirmations = 0;
   const savedBag = JSON.stringify([...memory]);

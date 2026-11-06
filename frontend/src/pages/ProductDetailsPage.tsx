@@ -85,7 +85,7 @@ function ProductDetailsContent({ product }: { product: ProductDetails }) {
         <p className="mt-7 text-2xl tabular-nums">{formatPrice(product.price)} <span className="text-xs text-muted">USD</span></p>
         <p className="mt-6 max-w-prose text-base leading-7 text-muted">{product.description}</p>
         <div className="my-8 border-y border-line py-6">
-          <p className="mb-5 text-sm font-medium">{product.stock > 0 ? `Catalog quantity: ${product.stock}` : 'Out of stock'}</p>
+          <p className={`mb-5 text-sm font-medium ${product.stock === 0 ? 'text-red-700' : product.stock <= 5 ? 'text-orange-700' : ''}`}>{product.stock === 0 ? 'Out of stock' : product.stock <= 5 ? `Only ${product.stock} left!` : 'In stock'}</p>
           <QuantitySelector stock={product.stock} quantity={quantity} onChange={setQuantity} productTitle={product.title} />
           {inBag > 0 && <p className="mt-3 text-xs text-muted">{inBag} already in your bag.{remaining === 0 && ' Stock limit reached.'}</p>}
           <button type="button" disabled={remaining === 0} onClick={addToBag} className="primary-link mt-6 min-h-14 w-full disabled:cursor-not-allowed disabled:opacity-50" aria-describedby="bag-availability">{product.stock === 0 ? 'Out of stock' : remaining === 0 ? 'Stock limit reached' : 'Add to Bag'}</button>

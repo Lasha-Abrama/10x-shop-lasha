@@ -29,10 +29,10 @@ export async function getCategories(signal: AbortSignal): Promise<Category[]> {
 }
 
 export function catalogUrl(query: CatalogQuery): string {
-  const combined = Boolean(query.q && query.category);
-  const path = query.q ? '/search' : query.category ? `/category/${encodeURIComponent(query.category)}` : '';
-  const params = new URLSearchParams({ limit: String(combined ? 0 : PAGE_SIZE), skip: String(combined ? 0 : (query.page - 1) * PAGE_SIZE) });
-  if (query.q) params.set('q', query.q);
+  const search = query.q.trim().toLowerCase();
+  const path = search ? '/search' : query.category ? `/category/${encodeURIComponent(query.category)}` : '';
+  const params = new URLSearchParams({ limit: String(search ? 0 : PAGE_SIZE), skip: String(search ? 0 : (query.page - 1) * PAGE_SIZE) });
+  if (search) params.set('q', search);
   if (query.sort !== 'default') {
     const [field, order] = query.sort.split('-');
     params.set('sortBy', field);
@@ -46,14 +46,15 @@ export async function getCatalogPage(query: CatalogQuery, signal: AbortSignal): 
   const response = await fetch(catalogUrl(query), { signal });
   const data = parseProductsResponse(await readProductResponse(response, signal));
   signal.throwIfAborted();
-  const combined = Boolean(query.q && query.category);
+  const search = query.q.trim().toLowerCase();
   const skip = (query.page - 1) * PAGE_SIZE;
-  if (combined) {
-    // DummyJSON ignores category on search. Filter ALL sorted matches before slicing.
+  if (search) {
+    // DummyJSON also searches descriptions. Filter ALL sorted candidates before slicing.
     if (data.skip !== 0 || data.products.length !== data.total) {
       throw new Error('The catalog returned incomplete search results. Please try again.');
     }
-    const matches = data.products.filter((product) => product.category === query.category);
+    const matches = data.products.filter((product) => product.title.toLowerCase().includes(search)
+      && (!query.category || product.category === query.category));
     return { products: matches.slice(skip, skip + PAGE_SIZE), total: matches.length, skip, limit: PAGE_SIZE };
   }
   if (data.skip !== skip || data.products.length > PAGE_SIZE

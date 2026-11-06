@@ -58,7 +58,8 @@ async function child() {
     if (url.pathname.startsWith('/products')) {
       await new Promise((resolve) => setTimeout(resolve, delay));
       const skip = Number(url.searchParams.get('skip') ?? 0);
-      return Response.json({ total: 24, skip, limit: 12, products: Array.from({ length: 12 }, (_, i) => ({
+      const limit = url.searchParams.get('limit') === '0' ? 24 : 12;
+      return Response.json({ total: 24, skip, limit, products: Array.from({ length: limit }, (_, i) => ({
         id: skip + i + 1, title: `Considered piece ${skip + i + 1}`, category: 'beauty', price: 12.5, rating: 4,
         thumbnail: `${location.origin}/images/ceramics.jpg`,
       })) });

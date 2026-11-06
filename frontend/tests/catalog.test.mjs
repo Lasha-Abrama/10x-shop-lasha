@@ -17,7 +17,7 @@ test('URL state round trips search, category, sorting and pagination', () => {
   assert.equal(parseCatalogQuery(new URLSearchParams({ q: 'x'.repeat(120) })).q.length, 100);
 });
 
-test('query construction uses globally sorted and server-paginated endpoints', () => {
+test('query construction keeps ordinary pages server-paginated and fetches complete search candidates', () => {
   for (const [query, path] of [
     [{ ...defaults, page: 3 }, '/products'],
     [{ ...defaults, q: 'phone & case', sort: 'price-asc' }, '/products/search'],
@@ -25,8 +25,8 @@ test('query construction uses globally sorted and server-paginated endpoints', (
   ]) {
     const url = new URL(catalogUrl(query));
     assert.equal(url.pathname, path);
-    assert.equal(url.searchParams.get('limit'), '12');
-    assert.equal(url.searchParams.get('skip'), String((query.page - 1) * 12));
+    assert.equal(url.searchParams.get('limit'), query.q ? '0' : '12');
+    assert.equal(url.searchParams.get('skip'), query.q ? '0' : String((query.page - 1) * 12));
     if (query.q) assert.equal(url.searchParams.get('q'), query.q);
     if (query.sort !== 'default') {
       assert.equal(url.searchParams.get('sortBy'), query.sort.split('-')[0]);
@@ -60,9 +60,59 @@ test('combined search/category filters the entire sorted result set before pagin
   assert.ok(page.products.every((item, index) => !index || page.products[index - 1].price >= item.price));
 });
 
-test('incomplete combined results are rejected rather than filtering a partial page', async (context) => {
+test('incomplete search results are rejected with or without a category', async (context) => {
   context.mock.method(globalThis, 'fetch', async () => Response.json({ products: [product(1)], total: 20, skip: 0, limit: 12 }));
-  await assert.rejects(getCatalogPage({ ...defaults, q: 'product', category: 'beauty' }, new AbortController().signal), /incomplete search/);
+  for (const category of ['', 'beauty']) {
+    await assert.rejects(getCatalogPage({ ...defaults, q: 'product', category }, new AbortController().signal), /incomplete search/);
+  }
+});
+
+test('search matches title substrings only, ignoring case and surrounding query whitespace', async (context) => {
+  const eyeshadow = { ...product(2), title: 'Eyeshadow Palette with Mirror' };
+  const glasses = { ...product(156, 'sunglasses'), title: 'Green and Black Glasses' };
+  context.mock.method(globalThis, 'fetch', async (input) => {
+    assert.ok(['eye', 'shadow', 'no title match'].includes(new URL(input).searchParams.get('q')));
+    return Response.json({ products: [eyeshadow, glasses], total: 2, skip: 0, limit: 2 });
+  });
+  for (const q of ['eye', 'EYE', '  eye \t', 'shadow']) {
+    const result = await getCatalogPage({ ...defaults, q }, new AbortController().signal);
+    assert.deepEqual(result, { products: [eyeshadow], total: 1, skip: 0, limit: 12 });
+  }
+  assert.equal((await getCatalogPage({ ...defaults, q: 'eye', category: 'sunglasses' }, new AbortController().signal)).total, 0);
+  assert.equal((await getCatalogPage({ ...defaults, q: 'eye', category: 'beauty' }, new AbortController().signal)).total, 1);
+  assert.equal((await getCatalogPage({ ...defaults, q: 'no title match' }, new AbortController().signal)).total, 0);
+});
+
+test('title-only totals and sorted pages include matches beyond the first upstream page', async (context) => {
+  const all = Array.from({ length: 40 }, (_, i) => ({ ...product(40 - i), title: i % 3 === 0 ? 'Description-only candidate' : `Eyeshadow ${40 - i}` }));
+  context.mock.method(globalThis, 'fetch', async (input, options) => {
+    const url = new URL(input);
+    assert.equal(url.pathname, '/products/search');
+    assert.equal(url.searchParams.get('q'), 'eye');
+    assert.equal(url.searchParams.get('limit'), '0');
+    assert.equal(url.searchParams.get('skip'), '0');
+    assert.equal(url.searchParams.get('sortBy'), 'price');
+    assert.equal(url.searchParams.get('order'), 'desc');
+    assert.ok(options.signal instanceof AbortSignal);
+    return Response.json({ products: all, total: all.length, skip: 0, limit: all.length });
+  });
+  const matches = all.filter((p) => p.title.startsWith('Eyeshadow'));
+  for (const page of [1, 2, 3, 4]) {
+    const result = await getCatalogPage({ ...defaults, q: 'eye', sort: 'price-desc', page }, new AbortController().signal);
+    assert.deepEqual(result, { products: matches.slice((page - 1) * 12, page * 12), total: 26, skip: (page - 1) * 12, limit: 12 });
+  }
+});
+
+test('empty and whitespace-only queries retain the normal paginated catalog', async (context) => {
+  const data = { products: [product(1)], total: 1, skip: 0, limit: 12 };
+  context.mock.method(globalThis, 'fetch', async (input) => {
+    const url = new URL(input);
+    assert.equal(url.pathname, '/products');
+    assert.equal(url.searchParams.get('limit'), '12');
+    assert.equal(url.searchParams.has('q'), false);
+    return Response.json(data);
+  });
+  for (const q of ['', ' \t ']) assert.deepEqual(await getCatalogPage({ ...defaults, q }, new AbortController().signal), data);
 });
 
 test('accepts empty matches and out-of-range pages so UI can normalize the page', async (context) => {
@@ -82,13 +132,18 @@ test('rejects incomplete pages, HTTP errors, network errors and malformed result
 });
 
 test('a delayed response is ignored after abort, even if fetch ignores the signal', async (context) => {
-  let finish;
-  context.mock.method(globalThis, 'fetch', () => new Promise((resolve) => { finish = resolve; }));
-  const controller = new AbortController();
-  const request = getCatalogPage(defaults, controller.signal);
-  controller.abort();
-  finish(Response.json({ products: [product(1)], total: 1, skip: 0, limit: 12 }));
-  await assert.rejects(request, { name: 'AbortError' });
+  for (const q of ['', 'product']) {
+    let finish;
+    const controller = new AbortController();
+    context.mock.method(globalThis, 'fetch', (_input, options) => {
+      assert.equal(options.signal, controller.signal);
+      return new Promise((resolve) => { finish = resolve; });
+    });
+    const request = getCatalogPage({ ...defaults, q }, controller.signal);
+    controller.abort();
+    finish(Response.json({ products: [product(1)], total: 1, skip: 0, limit: 12 }));
+    await assert.rejects(request, { name: 'AbortError' });
+  }
 });
 
 test('search waits 300ms and cancels outdated input or navigation', (context) => {

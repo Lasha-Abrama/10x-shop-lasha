@@ -187,17 +187,24 @@ async function child() {
     const box = account.getBoundingClientRect();
     check(box.width >= 44 && box.height >= 44 && box.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth, 'Authenticated header fits viewport with a usable target');
   }
-  flushSync(() => root.render(<MemoryRouter><Pagination query={{ q: '', category: '', sort: 'default', page: 50 }} totalPages={1_000_000} /></MemoryRouter>));
-  check(document.documentElement.scrollWidth <= innerWidth && document.querySelectorAll('ol li').length <= 7, 'Large pagination remains compact without horizontal overflow');
-  for (const link of document.querySelectorAll('nav a')) {
-    const box = link.getBoundingClientRect();
-    check(box.width >= 44 && box.height >= 44, 'Numbered pagination links have 44px targets');
+  for (const totalPages of [1, 2, 5, 6, 7, 17, 1_000_000]) {
+    for (const page of new Set([1, Math.ceil(totalPages / 2), totalPages])) {
+      flushSync(() => root.render(<MemoryRouter><Pagination query={{ q: '', category: '', sort: 'default', page }} totalPages={totalPages} /></MemoryRouter>));
+      const context = `page ${page} of ${totalPages}`;
+      const visible = [...document.querySelectorAll('ol li')].filter((item) => item.getBoundingClientRect().width > 0);
+      const centers = visible.map((item) => { const box = item.getBoundingClientRect(); return box.top + box.height / 2; });
+      check(document.documentElement.scrollWidth <= innerWidth && visible.length <= 7 && Math.max(...centers) - Math.min(...centers) < 1, `Pagination stays on one centered row without overflow: ${context}`);
+      const numbers = [...document.querySelectorAll<HTMLElement>('ol a, ol [aria-current="page"]')].filter((item) => item.getBoundingClientRect().width > 0);
+      check(numbers[0].textContent === '1' && numbers.at(-1)?.textContent === String(totalPages) && numbers.some((item) => item.getAttribute('aria-current') === 'page' && item.textContent === String(page)), `First, current and last page stay visible: ${context}`);
+      const links = [...document.querySelectorAll('nav a')].map((link) => link.getBoundingClientRect()).filter((box) => box.width > 0);
+      check(links.every((box) => box.width >= 44 && box.height >= 44 && box.left >= 0 && box.right <= innerWidth), `All visible pagination links retain 44px targets within the viewport: ${context}`);
+    }
   }
   window.parent.postMessage({ kind: 'polish-result', width, checks }, location.origin);
 }
 
 async function parent() {
-  const widths = preview ? [Number(params.get('preview'))] : [320, 375, 480, 768, 1024, 1440];
+  const widths = preview ? [Number(params.get('preview'))] : [320, 375, 390, 480, 768, 1024, 1440];
   for (const size of widths) {
     const frame = document.createElement('iframe');
     frame.title = `Storefront at ${size}px`;

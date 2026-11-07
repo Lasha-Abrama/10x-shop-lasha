@@ -68,6 +68,7 @@ let holdProduct = false;
 let releaseProduct = () => {};
 const catalogRequests: string[] = [];
 let catalogTotal = 24;
+const returnCases = ['/products', '/products?q=history', '/products?category=beauty', '/products?sort=title-asc&page=2', '/products?q=history&sort=price-desc&page=2'];
 async function delay(signal: AbortSignal | null | undefined) {
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => { signal?.removeEventListener('abort', cancel); resolve(); }, 300);
@@ -83,10 +84,10 @@ window.fetch = async (input, options) => {
   if (options?.method === 'POST') throw new Error('Unexpected write blocked by fixture');
   if (url.pathname === '/auth/me') return Response.json(user);
   if (url.pathname === '/products/categories') return Response.json([{ slug: 'beauty', name: 'Beauty' }]);
-  if (url.pathname === '/products/1') {
+  if (/^\/products\/[1-9]\d*$/.test(url.pathname)) {
     if (holdProduct) await new Promise<void>((resolve) => { releaseProduct = resolve; });
     else await delay(options?.signal);
-    return productFailure ? Response.json({}, { status: 503 }) : Response.json(product);
+    return productFailure ? Response.json({}, { status: 503 }) : Response.json({ ...product, id: Number(url.pathname.split('/').at(-1)) });
   }
   if (url.pathname.startsWith('/orders')) {
     await delay(options?.signal);
@@ -140,11 +141,34 @@ function focusChecks() {
 
 async function run() {
   history.replaceState(null, '', '/products');
-  root.render(<BrowserRouter><AuthProvider><CartProvider><Link className="sr-only" id="legacy-catalog" to="/products?q=history&category=beauty&sort=title-asc&page=2">Legacy catalog</Link><App /></CartProvider></AuthProvider></BrowserRouter>);
+  root.render(<BrowserRouter><AuthProvider><CartProvider><Link className="sr-only" id="legacy-catalog" to="/products?q=history&category=beauty&sort=title-asc&page=2">Legacy catalog</Link>{returnCases.map((to, index) => <Link key={to} className="sr-only" id={`return-case-${index}`} to={to}>Catalog return case {index}</Link>)}<App /></CartProvider></AuthProvider></BrowserRouter>);
   await waitFor(() => ready() && Boolean(document.querySelector('article')) && document.fonts.status === 'loaded');
   check(scrollY === 0, 'Initial navigation starts at the top');
   if (keyboardOnly) return;
   focusChecks();
+
+  const returnLink = () => [...document.querySelectorAll<HTMLAnchorElement>('main a')].find((link) => link.textContent === 'Back to all products');
+  for (const [index, origin] of returnCases.entries()) {
+    click(`#return-case-${index}`);
+    await waitFor(() => ready() && `${location.pathname}${location.search}` === origin);
+    click('article a');
+    await waitFor(() => ready() && Boolean(document.querySelector('#product-title')));
+    check(returnLink()?.getAttribute('href') === origin, `Product return retains canonical catalog context: ${origin}`);
+    history.back();
+    await waitFor(() => ready() && `${location.pathname}${location.search}` === origin);
+    history.forward();
+    await waitFor(() => ready() && Boolean(document.querySelector('#product-title')));
+    check(returnLink()?.getAttribute('href') === origin, `Native Back/Forward retains product return state: ${origin}`);
+    returnLink()?.click();
+    await waitFor(() => ready() && `${location.pathname}${location.search}` === origin);
+  }
+  click('header a[href="/"]');
+  await waitFor(() => ready() && location.pathname === '/' && Boolean(document.querySelector('article')));
+  click('article a');
+  await waitFor(() => ready() && Boolean(document.querySelector('#product-title')));
+  check(returnLink()?.getAttribute('href') === '/products', 'Homepage product entry safely returns to the default catalog');
+  returnLink()?.click();
+  await waitFor(() => ready() && location.pathname === '/products' && location.search === '');
 
   const pagination = () => document.querySelector('nav[aria-label="Product pages"]');
   check(pagination()?.querySelector('[aria-current="page"]')?.textContent === '1' && pagination()?.querySelector('[aria-disabled="true"]')?.textContent === 'Previous', 'First numbered page is current and Previous is disabled');

@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
+import { safeCatalogReturnTo } from '../catalog/returnTo';
 import type { Product } from '../api/products';
 import { formatPrice } from '../format';
 import { CardBagButton } from './CardBagButton';
 
 export function ProductCard({ product }: { product: Product }) {
+  const location = useLocation();
+  const catalogReturnTo = location.pathname === '/products' ? safeCatalogReturnTo(`${location.pathname}${location.search}`) : '/products';
   const [imageFailed, setImageFailed] = useState(false);
 
   return (
     <article className="min-w-0">
-      <Link to={`/products/${product.id}`} className="group block" aria-label={`View ${product.title}`}>
+      <Link to={`/products/${product.id}`} state={{ catalogReturnTo }} className="group block" aria-label={`View ${product.title}`}>
         <div className="flex aspect-[4/5] items-center justify-center overflow-hidden rounded-editorial bg-surface">
           {imageFailed ? (
             <p className="px-6 text-center text-sm text-muted">Image unavailable for {product.title}</p>

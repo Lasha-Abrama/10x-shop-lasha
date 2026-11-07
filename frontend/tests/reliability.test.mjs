@@ -101,6 +101,24 @@ test('pagination exposes one current page, real URL links and disabled boundary 
   assert.doesNotMatch(render(query, 1), /<a\b/);
 });
 
+test('product detail return links use validated catalog state and safely handle missing or invalid state', async () => {
+  const { ProductDetailsPage } = await server.ssrLoadModule('/src/pages/ProductDetailsPage.tsx');
+  const { MemoryRouter, Routes, Route } = await import('react-router');
+  for (const [state, expected] of [
+    [null, '/products'], ['invalid', '/products'], [{}, '/products'],
+    [{ catalogReturnTo: 'https://evil.example/products' }, '/products'],
+    [{ catalogReturnTo: { pathname: '/products' } }, '/products'],
+    [{ catalogReturnTo: '/cart' }, '/products'],
+    [{ catalogReturnTo: '/products?q=EYE&sort=title-asc&page=2' }, '/products?q=EYE&sort=title-asc&page=2'],
+    [{ catalogReturnTo: '/products?category=groceries&page=3' }, '/products?category=groceries&page=3'],
+  ]) {
+    const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [{ pathname: '/products/5', state }] },
+      createElement(Routes, null, createElement(Route, { path: '/products/:id', element: createElement(ProductDetailsPage) }))));
+    const back = html.match(/<a[^>]*href="([^"]*)"[^>]*>Back to all products<\/a>/);
+    assert.equal(back?.[1], expected.replaceAll('&', '&amp;'));
+  }
+});
+
 test('guest header has one login before the bag and keeps registration on the auth page', async () => {
   const { Header } = await server.ssrLoadModule('/src/components/Header.tsx');
   const { AuthProvider } = await server.ssrLoadModule('/src/auth/AuthContext.tsx');

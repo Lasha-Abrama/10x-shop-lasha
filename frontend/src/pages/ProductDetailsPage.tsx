@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useParams } from 'react-router';
+import { safeCatalogReturnTo } from '../catalog/returnTo';
 import { getProductDetails } from '../api/products';
 import type { ProductDetails } from '../api/products';
 import { ProductGallery } from '../components/ProductGallery';
@@ -20,6 +21,8 @@ export function ProductDetailsPage() {
 }
 
 function ProductDetailsRequest({ id }: { id: string | undefined }) {
+  const { state: navigationState } = useLocation();
+  const catalogReturnTo = safeCatalogReturnTo(navigationState && typeof navigationState === 'object' && 'catalogReturnTo' in navigationState ? navigationState.catalogReturnTo : null);
   const [state, setState] = useState<DetailsState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
 
@@ -47,7 +50,7 @@ function ProductDetailsRequest({ id }: { id: string | undefined }) {
       {state.status === 'not-found' && <section role="status" className="min-h-80 py-12"><h1 className="section-title">Product not found.</h1><p className="mt-5 max-w-lg text-sm leading-6 text-muted">This product doesn’t exist or is no longer available. There’s more to discover in the collection.</p></section>}
       {state.status === 'error' && <section className="min-h-80 py-12"><div role="alert"><h1 className="section-title">A brief pause.</h1><p className="mt-5 max-w-lg text-sm leading-6 text-muted">{state.message}</p></div><button type="button" className="primary-link mt-6" onClick={() => { setState({ status: 'loading' }); setAttempt((value) => value + 1); }}>Try again</button></section>}
       {state.status === 'success' && <ProductDetailsContent product={state.product} />}
-      <Link to="/products" className="text-link mt-10 inline-flex items-center text-sm">Back to all products</Link>
+      <Link to={catalogReturnTo} className="text-link mt-10 inline-flex items-center text-sm">Back to all products</Link>
     </div>
   );
 }

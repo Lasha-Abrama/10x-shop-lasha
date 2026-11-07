@@ -6,6 +6,7 @@ import type { ProductsResponse } from '../api/products';
 import { catalogParams, PAGE_SIZE, parseCatalogQuery, scheduleCatalogSearch, SORT_OPTIONS } from '../catalog/query';
 import type { CatalogQuery } from '../catalog/query';
 import { ProductGrid } from '../components/ProductGrid';
+import { Pagination } from '../components/Pagination';
 
 type LoadState<T> = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: T };
 const fieldClass = 'min-h-12 w-full rounded-editorial border border-muted bg-paper py-3 text-sm';
@@ -41,11 +42,7 @@ function CatalogResults({ query }: { query: CatalogQuery }) {
     <h2 className="sr-only">Products</h2>
     <p role="status" className="mb-7 text-xs text-muted">Showing {(query.page - 1) * PAGE_SIZE + 1}–{Math.min(query.page * PAGE_SIZE, total)} of {total} products · Prices in USD</p>
     <ProductGrid products={products} />
-    <nav aria-label="Product pages" className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6 text-sm">
-      {query.page > 1 ? <Link className="text-link" to={`?${catalogParams({ ...query, page: query.page - 1 })}`}>Previous</Link> : <span className="text-muted" aria-disabled="true">Previous</span>}
-      <span aria-current="page" className="tabular-nums">Page {query.page} of {pages}</span>
-      {query.page < pages ? <Link className="text-link" to={`?${catalogParams({ ...query, page: query.page + 1 })}`}>Next</Link> : <span className="text-muted" aria-disabled="true">Next</span>}
-    </nav>
+    <Pagination query={query} totalPages={pages} />
   </>;
 }
 

@@ -67,6 +67,7 @@ let aborted = 0;
 let holdProduct = false;
 let releaseProduct = () => {};
 const catalogRequests: string[] = [];
+let catalogTotal = 24;
 async function delay(signal: AbortSignal | null | undefined) {
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => { signal?.removeEventListener('abort', cancel); resolve(); }, 300);
@@ -95,8 +96,8 @@ window.fetch = async (input, options) => {
   if (url.pathname.startsWith('/products')) {
     catalogRequests.push(url.pathname);
     const skip = Number(url.searchParams.get('skip') ?? 0);
-    const limit = url.searchParams.get('limit') === '0' ? 24 : 12;
-    return Response.json({ products: Array.from({ length: limit }, (_, i) => ({ ...product, id: skip + i + 1 })), total: 24, skip, limit });
+    const limit = url.searchParams.get('limit') === '0' ? catalogTotal : 12;
+    return Response.json({ products: Array.from({ length: Math.min(limit, Math.max(0, catalogTotal - skip)) }, (_, i) => ({ ...product, id: skip + i + 1 })), total: catalogTotal, skip, limit });
   }
   throw new Error('Unexpected request blocked by fixture');
 };
@@ -145,6 +146,31 @@ async function run() {
   if (keyboardOnly) return;
   focusChecks();
 
+  const pagination = () => document.querySelector('nav[aria-label="Product pages"]');
+  check(pagination()?.querySelector('[aria-current="page"]')?.textContent === '1' && pagination()?.querySelector('[aria-disabled="true"]')?.textContent === 'Previous', 'First numbered page is current and Previous is disabled');
+  await savePosition();
+  click('nav[aria-label="Product pages"] a[aria-label="Page 2"]');
+  await waitFor(() => ready() && location.search === '?page=2' && scrollY === 0);
+  check(document.querySelectorAll('article').length === 12 && document.activeElement?.id === 'main-content' && pagination()?.querySelector('[aria-current="page"]')?.textContent === '2' && !pagination()?.querySelector('[rel="next"]'), 'Numbered navigation shows 12 items, marks the last page, disables Next and scrolls/focuses at top');
+  await savePosition();
+  history.back();
+  await waitFor(() => ready() && location.search === '' && atSavedPosition());
+  check(pagination()?.querySelector('[aria-current="page"]')?.textContent === '1', 'Native Back restores the numbered first page and saved scroll instead of scrolling to top');
+  history.forward();
+  await waitFor(() => ready() && location.search === '?page=2' && atSavedPosition());
+  check(pagination()?.querySelector('[aria-current="page"]')?.textContent === '2', 'Native Forward restores the numbered second page and saved scroll');
+  click('nav[aria-label="Product pages"] a[aria-label="Page 1"]');
+  await waitFor(() => ready() && location.search === '' && scrollY === 0);
+  catalogTotal = 1;
+  click('nav[aria-label="Product pages"] a[aria-label="Page 2"]');
+  await waitFor(() => ready() && location.search === '' && document.querySelectorAll('article').length === 1);
+  check(pagination()?.querySelectorAll('a').length === 0 && pagination()?.querySelector('[aria-current="page"]')?.textContent === '1' && !document.querySelector('[role="alert"]'), 'Shrinking totals replace an out-of-range page with page one and disable both boundaries');
+  catalogTotal = 24;
+  click('#legacy-catalog');
+  await waitFor(() => ready() && location.search === '?q=history&sort=title-asc&page=2');
+  click('form[role="search"] button[type="button"]');
+  await waitFor(() => ready() && location.search === '' && document.querySelectorAll('article').length === 12);
+
   const searchInput = () => document.querySelector<HTMLInputElement>('#catalog-search')?.value;
   const categoryValue = () => document.querySelector<HTMLSelectElement>('select')?.value;
   const categoryUrl = '?category=beauty&sort=title-asc';
@@ -152,13 +178,13 @@ async function run() {
   await waitFor(() => ready() && location.search === '?sort=title-asc');
   choose(0, 'beauty');
   await waitFor(() => ready() && location.search === categoryUrl);
-  click('nav[aria-label="Product pages"] a:last-child');
+  click('nav[aria-label="Product pages"] a[rel="next"]');
   await waitFor(() => ready() && location.search.endsWith('page=2'));
   fill('catalog-search', 'history');
   check(searchInput() === 'history' && categoryValue() === 'beauty', 'Draft search updates immediately while the category remains active during debounce');
   await waitFor(() => ready() && location.search === '?q=history&sort=title-asc');
   check(categoryValue() === '' && catalogRequests.at(-1) === '/products/search', 'Debounced search clears category, resets page and preserves sorting');
-  click('nav[aria-label="Product pages"] a:last-child');
+  click('nav[aria-label="Product pages"] a[rel="next"]');
   await waitFor(() => ready() && location.search === '?q=history&sort=title-asc&page=2');
   fill('catalog-search', 'stale');
   choose(0, 'beauty');

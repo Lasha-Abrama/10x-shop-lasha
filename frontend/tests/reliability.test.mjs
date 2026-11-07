@@ -81,6 +81,26 @@ test('shared route loading fallback announces loading without an animated spinne
   assert.match(markup, /Loading your page/);
 });
 
+test('pagination exposes one current page, real URL links and disabled boundary controls', async () => {
+  const { Pagination } = await server.ssrLoadModule('/src/components/Pagination.tsx');
+  const { MemoryRouter } = await import('react-router');
+  const render = (query, totalPages) => renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/products'] }, createElement(Pagination, { query, totalPages })));
+  for (const mode of [{ q: 'EYE', category: '' }, { q: '', category: 'beauty' }]) {
+    const query = { ...mode, sort: 'title-asc', page: 2 };
+    const html = render(query, 4);
+    assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
+    assert.match(html, /aria-label="Page 2, current page"/);
+    assert.match(html, /aria-label="Page 3"/);
+    assert.match(html, new RegExp(`href="/products\\?${mode.q ? 'q=EYE' : 'category=beauty'}&amp;sort=title-asc&amp;page=3"`));
+  }
+  const query = { q: '', category: '', sort: 'default', page: 1 };
+  assert.match(render(query, 2), /aria-disabled="true">Previous/);
+  assert.doesNotMatch(render(query, 2), /rel="prev"/);
+  assert.match(render({ ...query, page: 2 }, 2), /aria-disabled="true">Next/);
+  assert.doesNotMatch(render({ ...query, page: 2 }, 2), /rel="next"/);
+  assert.doesNotMatch(render(query, 1), /<a\b/);
+});
+
 test('guest header has one login before the bag and keeps registration on the auth page', async () => {
   const { Header } = await server.ssrLoadModule('/src/components/Header.tsx');
   const { AuthProvider } = await server.ssrLoadModule('/src/auth/AuthContext.tsx');

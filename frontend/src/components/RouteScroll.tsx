@@ -39,12 +39,10 @@ export function RouteScroll() {
       if (!active || !main) return;
       const ready = expired || (document.fonts.status === 'loaded' && !main.querySelector('[data-scroll-pending]'));
       if (intent === 'restore' && saved) window.scrollTo({ ...saved, behavior: 'instant' });
-      else if (intent === 'top') window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-      else if (intent === 'anchor' || intent === 'results') {
-        let id = 'catalog-results';
-        if (intent === 'anchor') {
-          try { id = decodeURIComponent(location.hash.slice(1)); } catch { stop(); return; }
-        }
+      else if (intent === 'top' || intent === 'results') window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      else if (intent === 'anchor') {
+        let id: string;
+        try { id = decodeURIComponent(location.hash.slice(1)); } catch { stop(); return; }
         const target = document.getElementById(id);
         if (!target) { if (ready) stop(); return; }
         // Re-align only while content is settling; user input cancels this observation.
@@ -54,7 +52,7 @@ export function RouteScroll() {
         }
       }
       if (ready) {
-        if (intent === 'top') main.focus({ preventScroll: true });
+        if (intent === 'top' || intent === 'results') main.focus({ preventScroll: true });
         stop();
       }
     }

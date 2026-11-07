@@ -7,6 +7,7 @@ test('route scroll distinguishes page navigation, filter changes, anchors and hi
   assert.equal(scrollIntent(null, catalog, 'POP', false), 'top');
   assert.equal(scrollIntent(catalog, { ...catalog, pathname: '/login', search: '' }, 'PUSH', false), 'top');
   assert.equal(scrollIntent(catalog, { ...catalog, search: '?q=phone&page=3' }, 'PUSH', false), 'results');
+  assert.equal(scrollIntent(catalog, { ...catalog, search: '?q=phone&page=3' }, 'POP', true), 'restore');
   assert.equal(scrollIntent(catalog, { ...catalog, search: '?q=phone&category=smartphones' }, 'PUSH', false), 'preserve');
   assert.equal(scrollIntent(catalog, { ...catalog, search: '?q=apple' }, 'REPLACE', false), 'preserve');
   assert.equal(scrollIntent(catalog, { ...catalog, search: '?q=phone&sort=price-asc' }, 'PUSH', false), 'preserve');

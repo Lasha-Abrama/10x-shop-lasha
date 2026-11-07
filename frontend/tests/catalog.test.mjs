@@ -1,10 +1,30 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { catalogParams, parseCatalogQuery, scheduleCatalogSearch, SORT_OPTIONS } from '../src/catalog/query.ts';
+import { catalogPageNumbers, catalogParams, parseCatalogQuery, scheduleCatalogSearch, SORT_OPTIONS } from '../src/catalog/query.ts';
 import { catalogUrl, getCatalogPage, getCategories, parseCategories } from '../src/api/catalog.ts';
 
 const defaults = { q: '', category: '', sort: 'default', page: 1 };
 const product = (id, category = 'beauty', price = id) => ({ id, title: `Product ${id}`, category, price, rating: 5 - id / 100, thumbnail: 'https://example.com/product.webp' });
+
+test('numbered pagination stays bounded, ordered and compact even for a million pages', () => {
+  assert.deepEqual(catalogPageNumbers(1, 1), [1]);
+  assert.deepEqual(catalogPageNumbers(3, 7), [1, 2, 3, 4, 5, 6, 7]);
+  assert.deepEqual(catalogPageNumbers(50, 100), [1, null, 49, 50, 51, null, 100]);
+  for (const total of [2, 7, 8, 17, 1_000_000]) {
+    for (const page of new Set([1, 2, 4, Math.ceil(total / 2), total - 1, total].filter((n) => n <= total))) {
+      const items = catalogPageNumbers(page, total);
+      const numbers = items.filter((n) => n !== null);
+      assert.ok(items.length <= 7);
+      assert.equal(numbers[0], 1);
+      assert.equal(numbers.at(-1), total);
+      assert.ok(numbers.includes(page));
+      assert.ok(numbers.every((n, i) => n >= 1 && n <= total && (!i || n > numbers[i - 1])));
+      for (let i = 1; i < items.length - 1; i += 1) {
+        if (items[i] === null) assert.ok(items[i + 1] - items[i - 1] > 2);
+      }
+    }
+  }
+});
 
 test('URL state round trips search, category, sorting and pagination', () => {
   const query = { q: 'red lipstick', category: '', sort: 'price-desc', page: 3 };

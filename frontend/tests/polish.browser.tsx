@@ -5,6 +5,7 @@ import { MemoryRouter, useLocation, useNavigate } from 'react-router';
 import { App } from '../src/App';
 import { AuthProvider } from '../src/auth/AuthContext';
 import { CartProvider } from '../src/cart/CartContext';
+import { Pagination } from '../src/components/Pagination';
 import '../src/styles.css';
 
 const container = document.getElementById('root');
@@ -69,7 +70,8 @@ async function child() {
     }
     throw new Error('Unexpected fixture request; external fetch is disabled');
   };
-  createRoot(container!).render(<MemoryRouter initialEntries={['/products']}><AuthProvider><CartProvider><HistoryControls /><App /></CartProvider></AuthProvider></MemoryRouter>);
+  const root = createRoot(container!);
+  root.render(<MemoryRouter initialEntries={['/products']}><AuthProvider><CartProvider><HistoryControls /><App /></CartProvider></AuthProvider></MemoryRouter>);
   await waitFor(() => Boolean(document.querySelector('article')) && document.fonts.status === 'loaded');
   const header = document.querySelector('header')!;
   check(document.documentElement.scrollWidth <= innerWidth, 'No horizontal overflow');
@@ -96,13 +98,13 @@ async function child() {
     check(JSON.stringify([...sort.options].map((option) => option.value)) === '["default","price-asc","price-desc","rating-desc","title-asc"]', 'All five typed sort options are available');
     const ids = () => [...document.querySelectorAll<HTMLAnchorElement>('article a')].map((a) => Number(a.pathname.split('/').at(-1)));
     const query = () => document.getElementById('fixture-query')?.textContent ?? '';
-    click('nav[aria-label="Product pages"] a:last-child');
+    click('nav[aria-label="Product pages"] a[rel="next"]');
     await waitFor(() => ids()[0] === 13);
     sort.value = 'title-asc';
     flushSync(() => sort.dispatchEvent(new Event('change', { bubbles: true })));
     await waitFor(() => ids().at(-1) === 2);
     check(query() === '?sort=title-asc' && JSON.stringify(ids()) === '[1,10,11,12,13,14,15,16,17,18,19,2]', 'Name A–Z resets page two and uses global alphabetical order');
-    click('nav[aria-label="Product pages"] a:last-child');
+    click('nav[aria-label="Product pages"] a[rel="next"]');
     await waitFor(() => ids()[0] === 20);
     check(query() === '?sort=title-asc&page=2' && JSON.stringify(ids()) === '[20,21,22,23,24,3,4,5,6,7,8,9]', 'Alphabetical pagination preserves sort and includes the remaining products');
     click('#fixture-back');
@@ -124,9 +126,9 @@ async function child() {
     fill('catalog-search', 'piece');
     await waitFor(() => query() === '?q=piece' && Boolean(document.querySelector('article')));
     check(Math.abs(window.scrollY - 400) < 5 && document.activeElement?.id !== 'catalog-results', 'Typing keeps scroll position');
-    click('nav[aria-label="Product pages"] a:last-child');
-    await waitFor(() => document.activeElement?.id === 'catalog-results');
-    check(document.querySelector('article')?.textContent?.includes('13'), 'Pagination loads next page and focuses results');
+    click('nav[aria-label="Product pages"] a[rel="next"]');
+    await waitFor(() => document.activeElement?.id === 'main-content' && window.scrollY === 0 && Boolean(document.querySelector('article')));
+    check(document.querySelector('article')?.textContent?.includes('13'), 'Pagination loads next page, scrolls to top and focuses main content');
     window.scrollTo({ top: 700, behavior: 'instant' });
     await new Promise((resolve) => setTimeout(resolve, 50));
     click('header a[href="/login"]');
@@ -184,6 +186,12 @@ async function child() {
     check(account && !header.querySelector('a[href="/login"]'), 'One authenticated Account control');
     const box = account.getBoundingClientRect();
     check(box.width >= 44 && box.height >= 44 && box.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth, 'Authenticated header fits viewport with a usable target');
+  }
+  flushSync(() => root.render(<MemoryRouter><Pagination query={{ q: '', category: '', sort: 'default', page: 50 }} totalPages={1_000_000} /></MemoryRouter>));
+  check(document.documentElement.scrollWidth <= innerWidth && document.querySelectorAll('ol li').length <= 7, 'Large pagination remains compact without horizontal overflow');
+  for (const link of document.querySelectorAll('nav a')) {
+    const box = link.getBoundingClientRect();
+    check(box.width >= 44 && box.height >= 44, 'Numbered pagination links have 44px targets');
   }
   window.parent.postMessage({ kind: 'polish-result', width, checks }, location.origin);
 }

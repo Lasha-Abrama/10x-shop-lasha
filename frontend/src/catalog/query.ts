@@ -9,6 +9,20 @@ export const SORT_OPTIONS = {
 export type CatalogSort = keyof typeof SORT_OPTIONS;
 export type CatalogQuery = { q: string; category: string; sort: CatalogSort; page: number };
 
+export function catalogPageNumbers(page: number, totalPages: number): (number | null)[] {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+  const visible = [1];
+  for (let next = Math.max(2, page - 1); next <= Math.min(totalPages - 1, page + 1); next += 1) visible.push(next);
+  visible.push(totalPages);
+  const result: (number | null)[] = [];
+  for (const next of visible) {
+    const previous = result.at(-1);
+    if (typeof previous === 'number' && next - previous > 1) result.push(next - previous === 2 ? previous + 1 : null);
+    result.push(next);
+  }
+  return result;
+}
+
 export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
   const q = (params.get('q') ?? '').trim().slice(0, 100);
   const category = params.get('category') ?? '';

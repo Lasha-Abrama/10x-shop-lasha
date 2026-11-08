@@ -128,9 +128,42 @@ test('guest header has one login before the bag and keeps registration on the au
     createElement(AuthProvider, null, createElement(CartProvider, null, createElement(Header)))));
   assert.equal((html.match(/href="\/login"/g) ?? []).length, 1);
   assert.doesNotMatch(html, /href="\/register"/);
+  assert.doesNotMatch(html, /href="\/orders"/);
   assert.ok(html.indexOf('aria-label="Search products"') < html.indexOf('href="/login"'));
   assert.ok(html.indexOf('href="/login"') < html.indexOf('href="/cart"'));
   assert.match(html, /Log in/);
+});
+
+test('order history uses the exact empty wording and the existing catalog destination', async () => {
+  const { OrderHistory } = await server.ssrLoadModule('/src/pages/OrdersPage.tsx');
+  const { MemoryRouter } = await import('react-router');
+  const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(OrderHistory, { orders: [] })));
+  assert.match(html, />You have no orders yet\.</);
+  assert.match(html, /href="\/products"[^>]*>Browse products<\/a>/);
+  assert.doesNotMatch(html, /Pending payment|Processing|Shipped|Delivered|#10X-/);
+});
+
+test('order history preserves server order, UUIDs, quantities, historical amounts and unpaid status', async () => {
+  const { OrderHistory } = await server.ssrLoadModule('/src/pages/OrdersPage.tsx');
+  const { MemoryRouter } = await import('react-router');
+  const item = { id: '00000000-0000-4000-8000-000000000100', productId: 1, title: 'Recorded selection', quantity: 2, unitPriceCents: 1234, lineTotalCents: 2468 };
+  const newer = { id: '00000000-0000-4000-8000-000000000002', status: 'PENDING_PAYMENT', currency: 'USD', totalCents: 2468, createdAt: '2026-11-08T10:00:00Z', updatedAt: '2026-11-08T10:00:00Z', items: [item] };
+  const older = { ...newer, id: '00000000-0000-4000-8000-000000000001', createdAt: '2026-11-07T10:00:00Z', items: [{ ...item, quantity: 1, lineTotalCents: 1234 }], totalCents: 1234 };
+  const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(OrderHistory, { orders: [newer, older] })));
+  assert.ok(html.indexOf(newer.id) < html.indexOf(older.id));
+  for (const order of [newer, older]) assert.match(html, new RegExp(`href="/orders/${order.id}"`));
+  assert.match(html, /<dt[^>]*>Date<\/dt>/);
+  assert.match(html, /dateTime="2026-11-08T10:00:00Z"/);
+  assert.match(html, /<dt[^>]*>Items<\/dt>/);
+  assert.match(html, /2 units/);
+  assert.match(html, /1 unit</);
+  assert.match(html, /Total/);
+  assert.match(html, /\$24\.68/);
+  assert.match(html, /\$12\.34/);
+  assert.equal((html.match(/Pending payment · unpaid/g) ?? []).length, 2);
+  assert.match(html, /No payment has been taken/);
+  assert.match(html, /No shipping or stock reservation is arranged/);
+  assert.doesNotMatch(html, /Processing|Shipped|Delivered|#10X-/);
 });
 
 test('real lazy route preserves the shell while pending and resolves to the protected guest view', async () => {

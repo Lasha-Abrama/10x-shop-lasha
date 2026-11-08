@@ -40,7 +40,7 @@ function fill(id: string, value: string) {
 function HistoryControls() {
   const navigate = useNavigate();
   const current = useLocation();
-  return <div className="sr-only"><output id="fixture-query">{current.search}</output><button id="fixture-back" onClick={() => void navigate(-1)}>Fixture back</button><button id="fixture-forward" onClick={() => void navigate(1)}>Fixture forward</button></div>;
+  return <div className="sr-only"><output id="fixture-query">{current.search}</output><button id="fixture-back" onClick={() => void navigate(-1)}>Fixture back</button><button id="fixture-forward" onClick={() => void navigate(1)}>Fixture forward</button><button id="fixture-orders" onClick={() => void navigate('/orders')}>Fixture orders</button></div>;
 }
 
 async function child() {
@@ -51,11 +51,26 @@ async function child() {
   } });
   const user = { id: '3381026f-bc0d-466f-bab3-ef735b663c35', email: 'mock@example.com', role: 'USER', createdAt: '2026-10-21T10:00:00Z', updatedAt: '2026-10-21T10:00:00Z' };
   let delay = 0;
-  window.fetch = async (input) => {
+  let orderMode: 'empty' | 'list' | 'error' | 'missing' = 'empty';
+  let orderDelay = 0;
+  let orderReads = 0;
+  const order = { id: '00000000-0000-4000-8000-000000000002', status: 'PENDING_PAYMENT', currency: 'USD', totalCents: 2468,
+    createdAt: '2026-11-08T10:00:00Z', updatedAt: '2026-11-08T10:00:00Z',
+    items: [{ id: '00000000-0000-4000-8000-000000000100', productId: 1, title: 'Recorded selection', quantity: 2, unitPriceCents: 1234, lineTotalCents: 2468 }] };
+  const olderOrder = { ...order, id: '00000000-0000-4000-8000-000000000001', createdAt: '2026-11-07T10:00:00Z' };
+  window.fetch = async (input, options) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
     if (url.pathname === '/auth/login') return Response.json({ user, accessToken: 'mock.payload.signature', expiresIn: 900, tokenType: 'Bearer' });
     if (url.pathname === '/auth/me') return Response.json(user);
-    if (url.pathname === '/orders') return Response.json([]);
+    if (url.pathname.startsWith('/orders')) {
+      check(options?.method === 'GET', 'Order fixture permits GET reads only');
+      orderReads += 1;
+      const mode = orderMode;
+      await new Promise((resolve) => setTimeout(resolve, orderDelay));
+      if (mode === 'error') return Response.json({}, { status: 503 });
+      if (url.pathname !== '/orders') return mode === 'missing' ? Response.json({}, { status: 404 }) : Response.json(order);
+      return Response.json(mode === 'empty' ? [] : [order, olderOrder]);
+    }
     if (url.pathname === '/products/categories') return Response.json([{ slug: 'beauty', name: 'Beauty' }]);
     if (url.pathname.startsWith('/products')) {
       await new Promise((resolve) => setTimeout(resolve, delay));
@@ -75,6 +90,12 @@ async function child() {
   await waitFor(() => Boolean(document.querySelector('article')) && document.fonts.status === 'loaded');
   const header = document.querySelector('header')!;
   check(document.documentElement.scrollWidth <= innerWidth, 'No horizontal overflow');
+  check(!header.querySelector('a[href="/orders"]'), 'Guest desktop and mobile navigation omit Orders');
+  click('#fixture-orders');
+  await waitFor(() => document.querySelector('h1')?.textContent === 'Sign in to continue.');
+  check(orderReads === 0 && !document.querySelector('main')?.textContent?.includes(order.id), 'Guest order route exposes no order data and makes no order request');
+  click('header a[href="/products"]');
+  await waitFor(() => Boolean(document.querySelector('article')));
   const login = header.querySelector<HTMLAnchorElement>('a[href="/login"]')!;
   check(header.querySelectorAll('a[href="/login"]').length === 1 && !header.querySelector('a[href="/register"]'), 'One guest login; registration is not duplicated');
   const actions = [...header.querySelectorAll<HTMLAnchorElement>('a')].filter((a) => ['Search products', 'Log in', 'Shopping bag, 0 items'].includes(a.getAttribute('aria-label') ?? a.textContent?.trim() ?? ''));
@@ -92,6 +113,49 @@ async function child() {
     check(document.activeElement === select, 'Native select accepts keyboard focus');
   }
   if (preview) return;
+  async function checkOrderHistory() {
+    check(header.querySelectorAll('a[href="/orders"]').length === 2 && Boolean(header.querySelector('a[href="/account"]')), 'Authenticated desktop/mobile Orders entries preserve Account');
+    async function openOrders() {
+      if (width < 1280) {
+        click('header button[aria-controls="mobile-navigation"]');
+        await waitFor(() => !header.querySelector('#mobile-navigation')?.hasAttribute('hidden'));
+      }
+      const link = header.querySelector<HTMLAnchorElement>(width < 1280 ? '#mobile-navigation a[href="/orders"]' : 'nav[aria-label="Main navigation"] a[href="/orders"]')!;
+      link.focus();
+      check(document.activeElement === link && link.tabIndex === 0 && link.getBoundingClientRect().height >= 44, 'Visible Orders link is keyboard focusable with a 44px target');
+      link.click();
+    }
+    orderDelay = 250;
+    await openOrders();
+    await waitFor(() => Boolean(document.querySelector('main [data-scroll-pending]')));
+    check(document.querySelector('[role="status"]')?.textContent === 'Loading your orders…', 'Order loading remains announced');
+    await waitFor(() => document.querySelector('h2')?.textContent === 'You have no orders yet.');
+    check(document.querySelector('main a[href="/products"]')?.textContent === 'Browse products', 'Exact empty-state catalog action targets /products');
+    check(header.querySelector('#mobile-navigation')?.hasAttribute('hidden') && header.querySelector('a[href="/orders"]')?.getAttribute('aria-current') === 'page', 'Orders navigation marks the route and closes the mobile menu');
+    click('main a[href="/products"]');
+    await waitFor(() => Boolean(document.querySelector('article')));
+    orderDelay = 0;
+    orderMode = 'error';
+    await openOrders();
+    await waitFor(() => Boolean(document.querySelector('main [role="alert"]')));
+    check(!document.querySelector('main')?.textContent?.includes(order.id), 'Failed order read reveals no stale history');
+    orderMode = 'list';
+    click('main button');
+    await waitFor(() => Boolean(document.querySelector(`main a[href="/orders/${order.id}"]`)));
+    const main = document.querySelector('main')!;
+    check(main.textContent!.indexOf(order.id) < main.textContent!.indexOf(olderOrder.id), 'Newest-first server ordering is preserved');
+    for (const text of ['latest 50', 'Date', 'November 8, 2026', 'Items', '2 units', 'Total', '$24.68', 'Pending payment · unpaid', 'No shipping or stock reservation']) check(main.textContent?.includes(text), `Order summary contains ${text}`);
+    check(!/Processing|Shipped|Delivered|#10X-/.test(main.textContent!), 'No invented sequence or fulfillment status');
+    check(document.documentElement.scrollWidth <= innerWidth && [...main.querySelectorAll('a')].every((link) => link.getBoundingClientRect().right <= innerWidth), 'UUID references and order fields fit the viewport');
+    orderMode = 'missing';
+    click(`main a[href="/orders/${order.id}"]`);
+    await waitFor(() => document.querySelector('h2')?.textContent === 'Order not found.');
+    check(Boolean(document.querySelector('main [role="alert"]')) && !document.querySelector('main button'), 'Missing order keeps unavailable messaging without a retry action');
+    check(header.querySelector('a[href="/orders"]')?.getAttribute('aria-current') === 'page', 'Orders remains active on a detail route');
+    orderMode = 'list';
+    click('main a[href="/orders"]');
+    await waitFor(() => Boolean(document.querySelector(`main a[href="/orders/${order.id}"]`)));
+  }
   if (width === 375) {
     const sort = document.querySelectorAll<HTMLSelectElement>('select')[1];
     const selectedSort = () => sort.value;
@@ -144,6 +208,7 @@ async function child() {
     document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await waitFor(() => Boolean(document.querySelector('header a[href="/account"]')) && Boolean(document.querySelector('article')));
     check(!header.querySelector('a[href="/login"]') && header.textContent?.includes('Account'), 'Mock login changes the single header control to Account');
+    await checkOrderHistory();
     click('header a[href="/account"]');
     await waitFor(() => Boolean(document.querySelector('main a[href="/orders"]')));
     click('main a[href="/orders"]');
@@ -153,6 +218,7 @@ async function child() {
     click('main button');
     await waitFor(() => Boolean(document.querySelector('header a[href="/login"]')) && Boolean(document.querySelector('article')));
     check(!header.querySelector('a[href="/account"]'), 'Account logout returns guest navigation');
+    check(!header.querySelector('a[href="/orders"]'), 'Logout removes both Orders navigation entries');
     click('header a[href="/products#catalog-search"]');
     await waitFor(() => document.activeElement?.id === 'catalog-search');
     check(document.getElementById('catalog-search')?.getAttribute('tabindex') === null, 'Search anchor preserves native tab order');
@@ -179,6 +245,7 @@ async function child() {
     fill('auth-email', user.email); fill('auth-password', 'mock only password phrase');
     document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await waitFor(() => Boolean(header.querySelector('a[href="/account"]')));
+    await checkOrderHistory();
   }
   const account = header.querySelector<HTMLAnchorElement>('a[href="/account"]');
   // The 375px flow ends as a guest after testing logout; other widths end signed in.

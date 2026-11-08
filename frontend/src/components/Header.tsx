@@ -16,9 +16,11 @@ export function Header() {
   const menuButton = useRef<HTMLButtonElement>(null);
   const { state } = useCart();
   const { user } = useAuth();
+  const links = user ? [...navigation, { label: 'Orders', href: '/orders' }] : navigation;
   const { itemCount } = getCartTotals(state);
   const location = useLocation();
   function isCurrent(href: string) {
+    if (href === '/orders') return location.pathname === href || location.pathname.startsWith('/orders/');
     return href === '/products' ? location.pathname === '/products'
       : `${location.pathname}${location.hash}` === href;
   }
@@ -35,7 +37,7 @@ export function Header() {
           10X<span className="ml-2 font-normal">SHOP</span><span className="text-accent">.</span>
         </Link>
         <nav aria-label="Main navigation" className="hidden items-center justify-self-center gap-6 text-sm xl:flex">
-          {navigation.map((item) => <Link key={item.href} className={`nav-link touch-target ${isCurrent(item.href) ? 'underline underline-offset-4' : ''}`} aria-current={isCurrent(item.href) ? 'page' : undefined} to={item.href}>{item.label}</Link>)}
+          {links.map((item) => <Link key={item.href} className={`nav-link touch-target ${isCurrent(item.href) ? 'underline underline-offset-4' : ''}`} aria-current={isCurrent(item.href) ? 'page' : undefined} to={item.href}>{item.label}</Link>)}
         </nav>
         <div className="flex items-center justify-between gap-1 min-[480px]:justify-self-end sm:gap-4">
           <Link to="/products#catalog-search" onClick={() => setMenuOpen(false)} className="nav-link touch-target justify-center gap-1.5 text-sm" aria-label="Search products">
@@ -56,7 +58,7 @@ export function Header() {
           </button>
         </div>
         <nav id="mobile-navigation" aria-label="Mobile navigation" hidden={!menuOpen} className="col-span-full w-full border-t border-line pt-3 xl:hidden">
-          {navigation.map((item) => <Link key={item.href} to={item.href} onClick={() => setMenuOpen(false)} aria-current={isCurrent(item.href) ? 'page' : undefined} className={`nav-link touch-target block py-3 text-base ${isCurrent(item.href) ? 'underline underline-offset-4' : ''}`}>{item.label}</Link>)}
+          {links.map((item) => <Link key={item.href} to={item.href} onClick={() => setMenuOpen(false)} aria-current={isCurrent(item.href) ? 'page' : undefined} className={`nav-link touch-target block py-3 text-base ${isCurrent(item.href) ? 'underline underline-offset-4' : ''}`}>{item.label}</Link>)}
         </nav>
       </div>
     </header>

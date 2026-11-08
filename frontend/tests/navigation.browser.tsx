@@ -96,6 +96,7 @@ window.fetch = async (input, options) => {
   }
   if (url.pathname.startsWith('/products')) {
     catalogRequests.push(url.pathname);
+    if (url.pathname === '/products/search' && url.searchParams.get('q') === 'pending history') await delay(options?.signal);
     const skip = Number(url.searchParams.get('skip') ?? 0);
     const limit = url.searchParams.get('limit') === '0' ? catalogTotal : 12;
     return Response.json({ products: Array.from({ length: Math.min(limit, Math.max(0, catalogTotal - skip)) }, (_, i) => ({ ...product, id: skip + i + 1 })), total: catalogTotal, skip, limit });
@@ -192,6 +193,8 @@ async function run() {
   catalogTotal = 24;
   click('#legacy-catalog');
   await waitFor(() => ready() && location.search === '?q=history&sort=title-asc&page=2');
+  const searchRequests = () => catalogRequests.filter((path) => path === '/products/search').length;
+  const completedSearchRequests = searchRequests();
   click('form[role="search"] button[type="button"]');
   await waitFor(() => ready() && location.search === '' && document.querySelectorAll('article').length === 12);
 
@@ -207,9 +210,10 @@ async function run() {
   fill('catalog-search', 'history');
   check(searchInput() === 'history' && categoryValue() === 'beauty', 'Draft search updates immediately while the category remains active during debounce');
   await waitFor(() => ready() && location.search === '?q=history&sort=title-asc');
-  check(categoryValue() === '' && catalogRequests.at(-1) === '/products/search', 'Debounced search clears category, resets page and preserves sorting');
+  check(categoryValue() === '' && document.querySelectorAll('article').length === 12 && searchRequests() === completedSearchRequests, 'Debounced search clears category, resets page and preserves sorting using completed results');
   click('nav[aria-label="Product pages"] a[rel="next"]');
   await waitFor(() => ready() && location.search === '?q=history&sort=title-asc&page=2');
+  check(searchRequests() === completedSearchRequests && document.querySelector('article')?.textContent?.includes('History fixture product'), 'Search pagination reuses the complete cached results without another request');
   fill('catalog-search', 'stale');
   choose(0, 'beauty');
   await waitFor(() => ready() && location.search === categoryUrl);
@@ -219,6 +223,7 @@ async function run() {
   history.back();
   await waitFor(() => ready() && location.search === '?q=history&sort=title-asc&page=2');
   check(searchInput() === 'history' && categoryValue() === '', 'Native Back restores search input, mode, sorting and page');
+  check(searchRequests() === completedSearchRequests, 'Native Back reuses completed search results');
   history.forward();
   await waitFor(() => ready() && location.search === categoryUrl);
   check(searchInput() === '' && categoryValue() === 'beauty', 'Native Forward restores category mode and clears visible search');
@@ -243,6 +248,15 @@ async function run() {
   history.forward();
   await waitFor(() => ready() && location.search === '?q=history&sort=title-asc&page=2');
   check(searchInput() === 'history' && categoryValue() === '', 'Native history retains the canonical legacy destination');
+  check(searchRequests() === completedSearchRequests, 'Repeated mode switches and history navigation make no additional completed-search requests');
+  const beforePending = searchRequests();
+  const beforeSearchAbort = aborted;
+  fill('catalog-search', 'pending history');
+  await waitFor(() => searchRequests() === beforePending + 1 && !ready());
+  choose(0, 'beauty');
+  await waitFor(() => ready() && location.search === categoryUrl);
+  await pause(350);
+  check(aborted > beforeSearchAbort && searchInput() === '' && categoryValue() === 'beauty' && document.querySelectorAll('article').length === 12, 'Switching modes during a pending cold search aborts it and cannot replace the new category UI');
   click('form[role="search"] button[type="button"]');
   await waitFor(() => ready() && location.search === '');
 

@@ -1,10 +1,16 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { beforeEach, test } from 'node:test';
 import { catalogPageNumbers, catalogParams, parseCatalogQuery, scheduleCatalogSearch, SORT_OPTIONS } from '../src/catalog/query.ts';
 import { catalogUrl, getCatalogPage, getCategories, parseCategories } from '../src/api/catalog.ts';
 
 const defaults = { q: '', category: '', sort: 'default', page: 1 };
 const product = (id, category = 'beauty', price = id) => ({ id, title: `Product ${id}`, category, price, rating: 5 - id / 100, thumbnail: 'https://example.com/product.webp' });
+
+let now = 0;
+beforeEach((context) => {
+  now += 60_001;
+  context.mock.method(Date, 'now', () => now);
+});
 
 test('numbered pagination stays bounded, ordered and compact even for a million pages', () => {
   assert.deepEqual(catalogPageNumbers(1, 1), [1]);

@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import type { Order } from '../api/orders';
 import { formatPrice } from '../format';
+import { actualOrderStatusLabels } from '../orders/status';
 
 export function OrderSummary({ order }: { order: Order }) {
   return <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16">
@@ -18,7 +19,7 @@ export function OrderSummary({ order }: { order: Order }) {
       </ul>
     </div>
     <aside aria-label="Order status and total" className="rounded-editorial bg-surface p-7 sm:p-8">
-      <h2 className="font-display text-3xl">Recorded · unpaid</h2>
+      <h2 className="font-display text-3xl">{actualOrderStatusLabels[order.status]}</h2>
       <p className="mt-4 text-sm leading-7 text-muted">No payment was taken. No shipping or stock reservation is arranged.</p>
       <dl className="mt-7 border-y border-line py-5"><div className="flex flex-wrap justify-between gap-3"><dt>Total (USD)</dt><dd className="tabular-nums">{formatPrice(order.totalCents / 100)}</dd></div></dl>
       <p className="mt-4 text-xs leading-6 text-muted">This is the server-confirmed item total. No tax, shipping charge, or discount has been added.</p>

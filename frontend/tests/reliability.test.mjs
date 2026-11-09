@@ -163,7 +163,32 @@ test('order history preserves server order, UUIDs, quantities, historical amount
   assert.equal((html.match(/Pending payment · unpaid/g) ?? []).length, 2);
   assert.match(html, /No payment has been taken/);
   assert.match(html, /No shipping or stock reservation is arranged/);
-  assert.doesNotMatch(html, /Processing|Shipped|Delivered|#10X-/);
+  assert.match(html, /Demo fulfillment status/);
+  assert.match(html, /Academic simulation only/);
+  assert.match(html, /no actual shipping or delivery occurs/);
+  assert.doesNotMatch(html, /#10X-/);
+});
+
+test('demo timeline labels current, completed and upcoming stages without claiming real fulfillment', async () => {
+  const { DemoFulfillmentTimeline } = await server.ssrLoadModule('/src/components/DemoFulfillment.tsx');
+  const createdAt = '2026-11-09T10:00:00Z';
+  const now = Date.parse(createdAt) + 60_000;
+  const html = renderToStaticMarkup(createElement(DemoFulfillmentTimeline, { createdAt, now }));
+  assert.match(html, /Simulated fulfillment timeline/);
+  assert.match(html, /Academic simulation only/);
+  assert.match(html, /No payment is processed/);
+  assert.match(html, /no inventory is reserved/);
+  assert.match(html, /Demo: Processing/);
+  assert.match(html, /Completed in simulation/);
+  assert.match(html, /aria-current="step"[^>]*><p[^>]*>Demo: Shipped/);
+  assert.equal((html.match(/aria-current="step"/g) ?? []).length, 1);
+  assert.match(html, /Current demo stage/);
+  assert.match(html, /Demo: Delivered/);
+  assert.match(html, /Upcoming in simulation/);
+  const future = renderToStaticMarkup(createElement(DemoFulfillmentTimeline, { createdAt, now: now - 120_000 }));
+  assert.match(future, /Demo: Unavailable/);
+  assert.match(future, /ahead of this device/);
+  assert.doesNotMatch(future, /aria-current="step"/);
 });
 
 test('real lazy route preserves the shell while pending and resolves to the protected guest view', async () => {

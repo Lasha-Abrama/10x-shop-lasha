@@ -174,7 +174,7 @@ async function run() {
   await waitFor(() => Boolean(container?.textContent?.includes('Order recorded.')));
   check(itemCount() === '0', 'Confirmed success clears the bag and stays on confirmation');
   check(JSON.stringify(payload) === '{"items":[{"productId":1,"quantity":1}]}', 'Order payload contains only product ID and quantity, never form details or prices');
-  check(container?.textContent?.includes('$10.99') && container?.textContent?.includes('Recorded · unpaid'), 'Confirmation uses authoritative server total and truthful unpaid status');
+  check(container?.textContent?.includes('$10.99') && container?.textContent?.includes('Pending payment · unpaid'), 'Confirmation uses authoritative server total and truthful unpaid status');
   check(container?.textContent?.includes('Thank you! Your order has been placed.') && container?.textContent?.includes('No payment was taken.') && container?.textContent?.includes('No shipping or stock reservation is arranged.'), 'Annex thank-you wording preserves all payment, shipping and reservation disclosures');
   check(container?.textContent?.includes('Test Student') && container?.textContent?.includes('not sent to the server'), 'Confirmation shows the transient form details with a clear disclosure');
   check(![...memory.values()].some((value) => value.includes('Test Student') || value.includes('12 Sample Street') || value.includes('fixture.payload')), 'Form details and auth tokens are not persisted');

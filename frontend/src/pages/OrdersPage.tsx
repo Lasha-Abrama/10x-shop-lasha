@@ -6,6 +6,9 @@ import type { Order } from '../api/orders';
 import { OrderSummary } from '../components/OrderSummary';
 import { SignInPrompt } from '../components/SignInPrompt';
 import { formatPrice } from '../format';
+import { actualOrderStatusLabels } from '../orders/status';
+import { useDemoClock } from '../orders/useDemoClock';
+import { DemoFulfillmentBadge, DemoFulfillmentTimeline, SimulationDisclosure } from '../components/DemoFulfillment';
 
 type OrdersState = { kind: 'loading' } | { kind: 'error'; message: string; notFound: boolean }
   | { kind: 'list'; orders: Order[] } | { kind: 'detail'; order: Order };
@@ -46,12 +49,15 @@ function UserOrders({ id, token }: { id: string | undefined; token: string }) {
     <div className="mb-10 border-b border-line pb-8"><h1 className="section-title">{id ? 'Your order.' : 'Your orders.'}</h1><p className="mt-5 max-w-xl text-base leading-7 text-muted">{id ? 'The selection and prices recorded for this order.' : 'A record of your selections, with the latest 50 orders shown first.'}</p></div>
     {state.kind === 'loading' && <p data-scroll-pending role="status" className="py-12 text-muted">Loading your {id ? 'order' : 'orders'}…</p>}
     {state.kind === 'error' && <div className="py-6"><h2 className="font-display text-3xl">{state.notFound ? 'Order not found.' : 'A moment out of reach.'}</h2><p role="alert" className="mt-5 max-w-lg text-sm leading-7 text-muted">{state.message}</p><div className="mt-6 flex flex-wrap items-center gap-6">{!state.notFound && <button type="button" className="primary-link" onClick={() => setAttempt((value) => value + 1)}>Try again</button>}<Link className="text-link inline-flex items-center text-sm" to={id ? '/orders' : '/products'}>{id ? 'Back to your orders' : 'Explore the collection'}</Link></div></div>}
-    {state.kind === 'detail' && <><OrderSummary order={state.order} /><Link className="text-link mt-10 inline-flex items-center text-sm" to="/orders">Back to your orders</Link></>}
+    {state.kind === 'detail' && <OrderDetails order={state.order} />}
     {state.kind === 'list' && <OrderHistory orders={state.orders} />}
   </section>;
 }
 
-const statusLabels: Record<Order['status'], string> = { PENDING_PAYMENT: 'Pending payment · unpaid' };
+export function OrderDetails({ order }: { order: Order }) {
+  const now = useDemoClock();
+  return <><OrderSummary order={order} /><DemoFulfillmentTimeline createdAt={order.createdAt} now={now} /><Link className="text-link mt-10 inline-flex items-center text-sm" to="/orders">Back to your orders</Link></>;
+}
 
 export function OrderHistory({ orders }: { orders: Order[] }) {
   if (orders.length === 0) return <div className="py-6 sm:py-12">
@@ -59,7 +65,13 @@ export function OrderHistory({ orders }: { orders: Order[] }) {
     <p className="mt-5 max-w-md text-base leading-7 text-muted">Orders recorded for your account will appear here.</p>
     <div className="mt-8 flex flex-wrap items-center gap-6"><Link className="primary-link" to="/products">Browse products</Link><Link className="text-link inline-flex items-center text-sm" to="/cart">View your bag</Link></div>
   </div>;
+  return <LoadedOrderHistory orders={orders} />;
+}
+
+function LoadedOrderHistory({ orders }: { orders: Order[] }) {
+  const now = useDemoClock();
   return <>
+    <div className="mb-8 border border-line bg-surface p-5"><SimulationDisclosure /></div>
     <ul className="divide-y divide-line border-b border-line">
       {orders.map((order) => {
         const count = order.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -69,7 +81,8 @@ export function OrderHistory({ orders }: { orders: Order[] }) {
             <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm">
               <div><dt className="text-xs text-muted">Date</dt><dd className="mt-1"><time dateTime={order.createdAt}>{new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date(order.createdAt))}</time></dd></div>
               <div><dt className="text-xs text-muted">Items</dt><dd className="mt-1">{count} {count === 1 ? 'unit' : 'units'}</dd></div>
-              <div><dt className="text-xs text-muted">Status</dt><dd className="mt-1"><span className="inline-flex rounded-full border border-line bg-surface px-3 py-1 text-xs">{statusLabels[order.status]}</span></dd></div>
+              <div><dt className="text-xs text-muted">Actual order status</dt><dd className="mt-1"><span className="inline-flex rounded-full border border-line bg-surface px-3 py-1 text-xs">{actualOrderStatusLabels[order.status]}</span></dd></div>
+              <div><dt className="text-xs text-muted">Demo fulfillment status</dt><dd className="mt-1"><DemoFulfillmentBadge createdAt={order.createdAt} now={now} /></dd></div>
             </dl>
             <p className="mt-3 text-sm leading-6 text-muted wrap-anywhere">{order.items.map((item) => item.title).join(', ')}</p>
           </div>

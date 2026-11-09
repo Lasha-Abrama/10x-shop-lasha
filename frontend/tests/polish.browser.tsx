@@ -145,7 +145,7 @@ async function child() {
     const main = document.querySelector('main')!;
     check(main.textContent!.indexOf(order.id) < main.textContent!.indexOf(olderOrder.id), 'Newest-first server ordering is preserved');
     for (const text of ['latest 50', 'Date', 'November 8, 2026', 'Items', '2 units', 'Total', '$24.68', 'Pending payment · unpaid', 'No shipping or stock reservation']) check(main.textContent?.includes(text), `Order summary contains ${text}`);
-    check(!/Processing|Shipped|Delivered|#10X-/.test(main.textContent!), 'No invented sequence or fulfillment status');
+    check(main.textContent?.includes('Academic simulation only') && main.textContent.includes('Demo fulfillment status') && !main.textContent.includes('#10X-'), 'Demo fulfillment is explicitly academic and references remain real UUIDs');
     check(document.documentElement.scrollWidth <= innerWidth && [...main.querySelectorAll('a')].every((link) => link.getBoundingClientRect().right <= innerWidth), 'UUID references and order fields fit the viewport');
     orderMode = 'missing';
     click(`main a[href="/orders/${order.id}"]`);

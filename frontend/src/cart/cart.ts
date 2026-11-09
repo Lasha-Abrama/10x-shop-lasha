@@ -18,10 +18,12 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
     if (!Number.isSafeInteger(action.product.stock) || action.product.stock <= 0
       || !Number.isSafeInteger(action.quantity) || action.quantity < 1) return state;
     const existing = state.items.find((item) => item.id === action.product.id);
+    const quantity = (existing?.quantity ?? 0) + action.quantity;
+    if (quantity > action.product.stock) return state;
     const item: CartItem = {
       id: action.product.id, title: action.product.title, price: action.product.price,
       thumbnail: action.product.thumbnail, stock: action.product.stock,
-      quantity: Math.min(action.product.stock, (existing?.quantity ?? 0) + action.quantity),
+      quantity,
     };
     return acceptCart(state, { items: existing ? state.items.map((entry) => entry.id === item.id ? item : entry) : [...state.items, item] });
   }

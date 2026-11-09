@@ -10,21 +10,50 @@ const product = { id: 1, title: 'Essence Mascara Lash Princess', price: 9.99,
 const empty = { items: [] };
 const add = (state, quantity, item = product) => cartReducer(state, { type: 'add', product: item, quantity });
 
+test('rejects additions above fresh stock without decreasing or refreshing existing lines', () => {
+  for (const [existingQuantity, freshStock, requested] of [[8, 3, 2], [2, 3, 2], [2, 2, 1]]) {
+    const existing = Object.freeze({ ...product, stock: 10, quantity: existingQuantity });
+    const unrelated = Object.freeze({ ...product, id: 2, quantity: 1 });
+    const state = Object.freeze({ items: Object.freeze([unrelated, existing]) });
+    const totals = getCartTotals(state);
+    const serialized = JSON.stringify(state);
+    const next = add(state, requested, { ...product, stock: freshStock, price: 12.99,
+      title: 'Fresh title', thumbnail: 'https://example.com/fresh.png' });
+    assert.equal(next, state, `${existingQuantity} + ${requested} must not fit stock ${freshStock}`);
+    assert.equal(next.items[1], existing);
+    assert.equal(next.items[0], unrelated);
+    assert.equal(JSON.stringify(next), serialized);
+    assert.deepEqual(getCartTotals(next), totals);
+    assert.deepEqual(parseStoredCart(JSON.stringify({ version: 1, items: next.items })), state);
+  }
+});
+
 test('adds the selected quantity and keeps only the cart product snapshot', () => {
   const state = add(empty, 2, { ...product, description: 'Not stored' });
   assert.deepEqual(state, { items: [{ ...product, quantity: 2 }] });
   assert.deepEqual(empty, { items: [] });
 });
 
-test('merges duplicate IDs, caps at stock, and refreshes the latest price and stock', () => {
-  const first = add(empty, 2);
-  assert.deepEqual(add(first, 2).items, [{ ...product, quantity: 4 }]);
-  assert.equal(add(first, 99).items[0].quantity, 5);
-  const updated = add(first, 2, { ...product, price: 12.99, stock: 3 });
-  assert.equal(updated.items.length, 1);
-  assert.equal(updated.items[0].price, 12.99);
-  assert.equal(updated.items[0].quantity, 3);
-  assert.equal(first.items[0].quantity, 2);
+test('accepted additions merge exactly and refresh current metadata without changing unrelated lines', () => {
+  const unrelated = { ...product, id: 2, quantity: 1 };
+  const existing = { ...product, quantity: 2 };
+  const first = { items: [unrelated, existing] };
+  assert.deepEqual(add(first, 2).items, [unrelated, { ...product, quantity: 4 }]);
+  assert.equal(add(first, 99), first);
+  const fresh = { ...product, price: 12.99, stock: 3, title: 'Fresh title', thumbnail: 'https://example.com/fresh.png' };
+  const updated = add(first, 1, fresh);
+  assert.deepEqual(updated.items, [unrelated, { ...fresh, quantity: 3 }]);
+  assert.equal(updated.items[0], unrelated);
+  assert.deepEqual(first.items, [unrelated, { ...product, quantity: 2 }]);
+  assert.deepEqual(getCartTotals(updated), { itemCount: 4, subtotal: 48.96 });
+  assert.deepEqual(parseStoredCart(JSON.stringify({ version: 1, items: updated.items })), updated);
+});
+
+test('new products are rejected rather than clipped when the requested quantity exceeds stock', () => {
+  assert.equal(add(empty, 6), empty);
+  const state = add(empty, 1, { ...product, id: 2 });
+  assert.equal(add(state, 6), state);
+  assert.deepEqual(add(empty, 5), { items: [{ ...product, quantity: 5 }] });
 });
 
 test('out-of-stock items and invalid add quantities leave the cart unchanged', () => {
@@ -79,11 +108,19 @@ test('missing, malformed, unsupported versions and invalid entries recover to an
   }
 });
 
-test('restoration merges duplicates, caps quantities and discards extra stored fields', () => {
+test('restoration merges valid duplicates and discards extra stored fields', () => {
   const restored = parseStoredCart(JSON.stringify({ version: 1, items: [
-    { ...product, quantity: 4, token: 'not retained' }, { ...product, quantity: 4 },
+    { ...product, quantity: 3, token: 'not retained' }, { ...product, quantity: 2 },
   ] }));
   assert.deepEqual(restored, { items: [{ ...product, quantity: 5 }] });
+});
+
+test('restoration rejects over-stock new and duplicate lines without silently clipping them', () => {
+  for (const items of [[{ ...product, quantity: 6 }],
+    [{ ...product, quantity: 4 }, { ...product, quantity: 4 }],
+    [{ ...product, stock: 10, quantity: 8 }, { ...product, stock: 3, quantity: 2 }]]) {
+    assert.deepEqual(parseStoredCart(JSON.stringify({ version: 1, items })), empty);
+  }
 });
 
 test('blocked storage and quota failures do not throw', () => {

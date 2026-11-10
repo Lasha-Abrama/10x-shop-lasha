@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { getOrder, getOrders, OrderApiError } from '../api/orders';
 import type { Order } from '../api/orders';
 import { OrderSummary } from '../components/OrderSummary';
+import { ReorderControl } from '../components/ReorderControl';
 import { SignInPrompt } from '../components/SignInPrompt';
 import { formatPrice } from '../format';
 import { actualOrderStatusLabels } from '../orders/status';
@@ -49,7 +50,7 @@ function UserOrders({ id, token }: { id: string | undefined; token: string }) {
     <div className="mb-10 border-b border-line pb-8"><h1 className="section-title">{id ? 'Your order.' : 'Your orders.'}</h1><p className="mt-5 max-w-xl text-base leading-7 text-muted">{id ? 'The selection and prices recorded for this order.' : 'A record of your selections, with the latest 50 orders shown first.'}</p></div>
     {state.kind === 'loading' && <p data-scroll-pending role="status" className="py-12 text-muted">Loading your {id ? 'order' : 'orders'}…</p>}
     {state.kind === 'error' && <div className="py-6"><h2 className="font-display text-3xl">{state.notFound ? 'Order not found.' : 'A moment out of reach.'}</h2><p role="alert" className="mt-5 max-w-lg text-sm leading-7 text-muted">{state.message}</p><div className="mt-6 flex flex-wrap items-center gap-6">{!state.notFound && <button type="button" className="primary-link" onClick={() => setAttempt((value) => value + 1)}>Try again</button>}<Link className="text-link inline-flex items-center text-sm" to={id ? '/orders' : '/products'}>{id ? 'Back to your orders' : 'Explore the collection'}</Link></div></div>}
-    {state.kind === 'detail' && <OrderDetails order={state.order} />}
+    {state.kind === 'detail' && <><OrderDetails order={state.order} /><ReorderControl key={`${state.order.id}:${token}`} order={state.order} /></>}
     {state.kind === 'list' && <OrderHistory orders={state.orders} />}
   </section>;
 }

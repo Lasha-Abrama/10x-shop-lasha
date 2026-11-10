@@ -4,6 +4,7 @@ import { useCart } from '../cart/CartContext';
 import { getCartTotals, getItemSubtotal } from '../cart/cart';
 import type { CartItem } from '../cart/cart';
 import { QuantitySelector } from '../components/QuantitySelector';
+import { CartReorderNotice } from '../components/ReorderControl';
 import { formatPrice } from '../format';
 
 export function CartPage() {
@@ -22,6 +23,7 @@ export function CartPage() {
         <p className="text-sm text-muted">{itemCount} {itemCount === 1 ? 'item' : 'items'}</p>
       </div>
       <p role="status" aria-live="polite" className="mb-5 text-sm text-muted">{feedback || (emptyCheckout && state.items.length === 0 ? 'Add a product to your bag before checking out.' : '')}</p>
+      <CartReorderNotice />
       {state.items.length === 0 ? (
         <div className="py-12 sm:py-20">
           <h2 className="font-display text-4xl sm:text-5xl">Room for something good.</h2>

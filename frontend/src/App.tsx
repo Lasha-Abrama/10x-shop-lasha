@@ -23,6 +23,7 @@ export function App() {
         <Route path="login" element={<AuthPage key="login" mode="login" />} />
         <Route path="register" element={<AuthPage key="register" mode="register" />} />
         <Route path="account" element={<AccountPage />} />
+        <Route path="profile" element={<AccountPage />} />
         <Route path="checkout" element={<CheckoutPage />} />
         <Route path="orders" element={<OrdersPage />} />
         <Route path="orders/:id" element={<OrdersPage />} />

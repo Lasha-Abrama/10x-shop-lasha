@@ -26,7 +26,7 @@ test('independent login and registration links default to the catalog', () => {
 test('checkout and other explicit safe returns survive login/registration links', () => {
   assert.equal(authPath('login', '/checkout'), '/login?returnTo=%2Fcheckout');
   assert.equal(authPath('login', '/account'), '/login?returnTo=%2Faccount');
-  for (const destination of ['/products', '/checkout', '/orders', '/account', `/orders/${id}`]) {
+  for (const destination of ['/products', '/checkout', '/orders', '/account', '/profile', `/orders/${id}`]) {
     assert.equal(safeReturnTo(destination), destination);
     for (const mode of ['login', 'register']) {
       const link = new URL(authPath(mode, destination), 'http://localhost:5173');
@@ -203,4 +203,12 @@ test('detail validates UUIDs, matches the returned ID and treats missing/other-u
   await assert.rejects(getOrder(id, token, signal(), base), (error) => error.status === 404 && /not available for your account/.test(error.message));
   status = 401;
   await assert.rejects(getOrders(token, signal(), base), (error) => error.status === 401 && /session has ended/.test(error.message));
+});
+
+test('profile returns accept only the exact internal route', () => {
+  assert.equal(authPath('login', '/profile'), '/login?returnTo=%2Fprofile');
+  assert.equal(authPath('register', '/profile'), '/register?returnTo=%2Fprofile');
+  for (const unsafe of ['https://example.com/profile', '//example.com/profile', '/profile/extra', '/profile?returnTo=https://example.com', '/profile#x', '/%70rofile', '/profile/', '/profile\\evil']) {
+    assert.equal(safeReturnTo(unsafe), '/products');
+  }
 });

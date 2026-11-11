@@ -101,7 +101,7 @@ function render(signedIn = true, filled = true, path = '/checkout') {
   flushSync(() => root.render(<MemoryRouter key={++fixture} initialEntries={[path]}><AuthProvider><CartProvider>
     <Setup signedIn={signedIn} filled={filled}><Probe /><Routes><Route element={<Layout />}>
       <Route path="checkout" element={<CheckoutPage />} /><Route path="cart" element={<CartPage />} />
-      <Route path="account" element={<AccountPage />} />
+      <Route path="account" element={<AccountPage />} /><Route path="profile" element={<AccountPage />} />
       <Route path="products/:id" element={<ProductDetailsPage />} />
       <Route path="login" element={<AuthPage mode="login" />} /><Route path="products" element={<section className="page-width py-12"><h1 className="section-title">The collection.</h1><div className="mt-8 max-w-80"><ProductCard product={product} /></div></section>} />
     </Route></Routes></Setup>
@@ -200,7 +200,7 @@ async function run() {
   detailFailure = true; add(); await waitFor(() => Boolean(container?.textContent?.includes('Couldn’t check this product')));
   check(itemCount() === '2', 'Catalog failure leaves the bag intact');
   check(Boolean(container?.querySelector('a[href="/products"][aria-current="page"]')), 'Catalog navigation exposes the active page');
-  flushSync(() => container?.querySelector<HTMLAnchorElement>('header a[href="/account"]')?.click());
+  flushSync(() => container?.querySelector<HTMLAnchorElement>('header a[href="/profile"]')?.click());
   await waitFor(() => Boolean(container?.textContent?.includes('Account details')));
   container?.querySelectorAll<HTMLButtonElement>('main button').forEach((button) => { if (button.textContent === 'Logout') flushSync(() => button.click()); });
   await waitFor(() => Boolean(container?.querySelector('header a[href="/login"]')) && container?.querySelector('output')?.getAttribute('data-route') === '/products');

@@ -47,9 +47,16 @@ const atSavedPosition = () => Math.abs(scrollY - 900) < 5;
 const orderListReady = () => ready() && document.querySelector('h1')?.textContent === 'Your orders.';
 const orderDetailReady = () => ready() && document.querySelector('h1')?.textContent === 'Your order.';
 async function savePosition() {
-  window.scrollTo({ top: 900, behavior: 'instant' });
-  await waitFor(atSavedPosition);
-  await pause(50); // Deliver the native scroll event before leaving the history entry.
+  let delivered = false;
+  const observeScroll = () => { delivered = atSavedPosition(); };
+  window.addEventListener('scroll', observeScroll);
+  try {
+    window.scrollTo({ top: 900, behavior: 'instant' });
+    await waitFor(() => delivered && atSavedPosition());
+    if (!delivered || !atSavedPosition()) throw new Error(`Saved scroll did not settle near 900px: ${scrollY}px`);
+  } finally {
+    window.removeEventListener('scroll', observeScroll);
+  }
 }
 
 const user = { id: '3381026f-bc0d-466f-bab3-ef735b663c35', email: 'mock@example.com', role: 'USER', createdAt: '2026-10-21T10:00:00Z', updatedAt: '2026-10-21T10:00:00Z' };
@@ -172,6 +179,9 @@ async function run() {
   await waitFor(() => ready() && location.pathname === '/products' && location.search === '');
 
   const pagination = () => document.querySelector('nav[aria-label="Product pages"]');
+  const restoredPage = (search: string, page: string) => () =>
+    location.pathname === '/products' && location.search === search && ready()
+    && pagination()?.querySelector('[aria-current="page"]')?.textContent === page && atSavedPosition();
   check(pagination()?.querySelector('[aria-current="page"]')?.textContent === '1' && pagination()?.querySelector('[aria-disabled="true"]')?.textContent === 'Previous', 'First numbered page is current and Previous is disabled');
   await savePosition();
   click('nav[aria-label="Product pages"] a[aria-label="Page 2"]');
@@ -179,11 +189,13 @@ async function run() {
   check(document.querySelectorAll('article').length === 12 && document.activeElement?.id === 'main-content' && pagination()?.querySelector('[aria-current="page"]')?.textContent === '2' && !pagination()?.querySelector('[rel="next"]'), 'Numbered navigation shows 12 items, marks the last page, disables Next and scrolls/focuses at top');
   await savePosition();
   history.back();
-  await waitFor(() => ready() && location.search === '' && atSavedPosition());
-  check(pagination()?.querySelector('[aria-current="page"]')?.textContent === '1', 'Native Back restores the numbered first page and saved scroll instead of scrolling to top');
+  const restoredFirstPage = restoredPage('', '1');
+  await waitFor(restoredFirstPage);
+  check(restoredFirstPage(), 'Native Back restores the numbered first page and saved scroll instead of scrolling to top');
   history.forward();
-  await waitFor(() => ready() && location.search === '?page=2' && atSavedPosition());
-  check(pagination()?.querySelector('[aria-current="page"]')?.textContent === '2', 'Native Forward restores the numbered second page and saved scroll');
+  const restoredSecondPage = restoredPage('?page=2', '2');
+  await waitFor(restoredSecondPage);
+  check(restoredSecondPage(), 'Native Forward restores the numbered second page and saved scroll');
   click('nav[aria-label="Product pages"] a[aria-label="Page 1"]');
   await waitFor(() => ready() && location.search === '' && scrollY === 0);
   catalogTotal = 1;
@@ -289,13 +301,13 @@ async function run() {
   document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   await waitFor(() => location.pathname === '/products' && ready() && Boolean(document.querySelector('article')));
   check(true, 'Independent mocked login returns to the catalog');
-  click('header a[href="/account"]');
-  await waitFor(() => location.pathname === '/account' && ready() && Boolean(document.querySelector('main a[href="/orders"]')));
+  click('header a[href="/profile"]');
+  await waitFor(() => location.pathname === '/profile' && ready() && Boolean(document.querySelector('main a[href="/orders"]')));
   click('main a[href="/orders"]');
   await waitFor(orderListReady);
   await savePosition();
   history.back();
-  await waitFor(() => location.pathname === '/account' && ready() && Boolean(document.querySelector('main a[href="/orders"]')));
+  await waitFor(() => location.pathname === '/profile' && ready() && Boolean(document.querySelector('main a[href="/orders"]')));
   history.forward();
   await waitFor(() => Boolean(document.querySelector('main [data-scroll-pending]')));
   await waitFor(() => orderListReady() && atSavedPosition());

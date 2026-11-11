@@ -114,7 +114,7 @@ async function child() {
   }
   if (preview) return;
   async function checkOrderHistory() {
-    check(header.querySelectorAll('a[href="/orders"]').length === 2 && Boolean(header.querySelector('a[href="/account"]')), 'Authenticated desktop/mobile Orders entries preserve Account');
+    check(header.querySelectorAll('a[href="/orders"]').length === 2 && Boolean(header.querySelector('a[href="/profile"]')), 'Authenticated desktop/mobile Orders entries preserve Account');
     async function openOrders() {
       if (width < 1280) {
         click('header button[aria-controls="mobile-navigation"]');
@@ -206,18 +206,18 @@ async function child() {
     check(window.scrollY === 0, 'Forward restores login position');
     fill('auth-email', user.email); fill('auth-password', 'mock only password phrase');
     document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await waitFor(() => Boolean(document.querySelector('header a[href="/account"]')) && Boolean(document.querySelector('article')));
+    await waitFor(() => Boolean(document.querySelector('header a[href="/profile"]')) && Boolean(document.querySelector('article')));
     check(!header.querySelector('a[href="/login"]') && header.textContent?.includes('Account'), 'Mock login changes the single header control to Account');
     await checkOrderHistory();
-    click('header a[href="/account"]');
+    click('header a[href="/profile"]');
     await waitFor(() => Boolean(document.querySelector('main a[href="/orders"]')));
     click('main a[href="/orders"]');
     await waitFor(() => Boolean(document.querySelector('h1')) && document.querySelector('h1')?.textContent === 'Your orders.');
-    click('header a[href="/account"]');
+    click('header a[href="/profile"]');
     await waitFor(() => Boolean(document.querySelector('main button')));
     click('main button');
     await waitFor(() => Boolean(document.querySelector('header a[href="/login"]')) && Boolean(document.querySelector('article')));
-    check(!header.querySelector('a[href="/account"]'), 'Account logout returns guest navigation');
+    check(!header.querySelector('a[href="/profile"]'), 'Account logout returns guest navigation');
     check(!header.querySelector('a[href="/orders"]'), 'Logout removes both Orders navigation entries');
     click('header a[href="/products#catalog-search"]');
     await waitFor(() => document.activeElement?.id === 'catalog-search');
@@ -244,10 +244,10 @@ async function child() {
     await waitFor(() => Boolean(document.querySelector('#auth-email')));
     fill('auth-email', user.email); fill('auth-password', 'mock only password phrase');
     document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await waitFor(() => Boolean(header.querySelector('a[href="/account"]')));
+    await waitFor(() => Boolean(header.querySelector('a[href="/profile"]')));
     await checkOrderHistory();
   }
-  const account = header.querySelector<HTMLAnchorElement>('a[href="/account"]');
+  const account = header.querySelector<HTMLAnchorElement>('a[href="/profile"]');
   // The 375px flow ends as a guest after testing logout; other widths end signed in.
   if (width !== 375) {
     check(account && !header.querySelector('a[href="/login"]'), 'One authenticated Account control');

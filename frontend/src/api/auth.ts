@@ -15,13 +15,19 @@ export class AuthApiError extends Error {
   constructor(message: string, status?: number) { super(message); this.status = status; }
 }
 
-export function validateCredentials(credentials: Credentials): Partial<Record<keyof Credentials, string>> {
+export function validateCredentials(credentials: Credentials, mode: 'login' | 'register' = 'login'): Partial<Record<keyof Credentials, string>> {
   const email = credentials.email.trim().toLowerCase();
   const errors: Partial<Record<keyof Credentials, string>> = {};
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     || !/^[\x21-\x7e]+$/.test(email.split('@')[0])) errors.email = 'Enter a valid email address.';
   const length = [...credentials.password].length;
-  if (length < 15 || length > 128) errors.password = 'Use 15–128 characters. Spaces count and are kept as entered.';
+  if (mode === 'register') {
+    if (length < 12) errors.password = 'Use at least 12 characters.';
+    else if (length > 128) errors.password = 'Use no more than 128 characters.';
+    else if (/[\s\p{White_Space}]/u.test(credentials.password)) errors.password = 'Spaces and other whitespace are not allowed.';
+  } else if (length < 12) {
+    errors.password = 'Enter your password.';
+  }
   return errors;
 }
 
@@ -81,8 +87,8 @@ async function request(path: string, signal: AbortSignal, options: RequestInit, 
   }
 }
 
-function credentialsRequest(credentials: Credentials): RequestInit {
-  if (Object.keys(validateCredentials(credentials)).length) throw new AuthApiError('Check your email and password, then try again.');
+function credentialsRequest(credentials: Credentials, mode: 'login' | 'register'): RequestInit {
+  if (Object.keys(validateCredentials(credentials, mode)).length) throw new AuthApiError('Check your email and password, then try again.');
   return {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: credentials.email.trim().toLowerCase(), password: credentials.password }),
@@ -90,14 +96,14 @@ function credentialsRequest(credentials: Credentials): RequestInit {
 }
 
 export async function registerAccount(credentials: Credentials, signal: AbortSignal, baseUrl?: string): Promise<string> {
-  const data = await request('/auth/register', signal, credentialsRequest(credentials), baseUrl);
+  const data = await request('/auth/register', signal, credentialsRequest(credentials, 'register'), baseUrl);
   if (!record(data) || data.message !== REGISTRATION_ACK) throw invalidResponse();
   return REGISTRATION_ACK;
 }
 
 export async function authenticate(credentials: Credentials, signal: AbortSignal, baseUrl?: string): Promise<AuthSession> {
   const startedAt = Date.now();
-  const data = await request('/auth/login', signal, credentialsRequest(credentials), baseUrl);
+  const data = await request('/auth/login', signal, credentialsRequest(credentials, 'login'), baseUrl);
   if (!record(data) || typeof data.accessToken !== 'string' || data.accessToken.length > 4096
     || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(data.accessToken)
     || data.tokenType !== 'Bearer' || typeof data.expiresIn !== 'number'

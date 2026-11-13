@@ -15,7 +15,7 @@ const { readAuthConfig, JWT_ISSUER, JWT_AUDIENCE } = require('../dist/auth/auth.
 // Test-only key and storage. Never load .env or instantiate the real Prisma provider.
 const testSecret = 'a'.repeat(64);
 const origin = 'http://localhost:5173';
-const credentials = { email: 'shopper@example.com', password: 'correct horse battery staple' };
+const credentials = { email: 'shopper@example.com', password: 'correct-horse-battery-staple' };
 
 async function fixture(context, frontendOrigin = origin) {
   process.env.JWT_SECRET = testSecret;
@@ -128,7 +128,7 @@ test('duplicate email and concurrent unique-constraint races have identical ackn
   assert.deepEqual(responses[0].body, responses[1].body);
   assert.equal(api.users.size, 1);
   const original = [...api.users.values()][0].passwordHash;
-  const duplicate = await api.request('/auth/register', { body: { ...credentials, password: 'a different valid password' } });
+  const duplicate = await api.request('/auth/register', { body: { ...credentials, password: 'a-different-valid-password' } });
   assert.deepEqual(duplicate.body, responses[0].body);
   assert.equal([...api.users.values()][0].passwordHash, original);
   assert.equal(api.calls.find.length, 0);
@@ -137,10 +137,11 @@ test('duplicate email and concurrent unique-constraint races have identical ackn
 test('HTTP validation rejects malformed data, short/oversized passwords and client roles', async (context) => {
   for (const [name, body] of [
     ['email', { ...credentials, email: 'not-an-email' }],
-    ['short password', { ...credentials, password: 'x'.repeat(14) }],
+    ['short password', { ...credentials, password: 'x'.repeat(11) }],
     ['long password', { ...credentials, password: 'x'.repeat(129) }],
     ['non-string email', { ...credentials, email: {} }],
     ['non-string password', { ...credentials, password: 123456789012345 }],
+    ['confirmation injection', { ...credentials, confirmPassword: credentials.password }],
     ['role injection', { ...credentials, role: 'ADMIN' }],
     ['unknown field', { ...credentials, extra: 'value' }],
     ['array body', [credentials]],
@@ -158,12 +159,34 @@ test('HTTP validation rejects malformed data, short/oversized passwords and clie
   }
 });
 
-test('password length boundaries are accepted without trimming or truncation', async (context) => {
+test('signup accepts length boundaries and Unicode and signs in with the unchanged password', async (context) => {
   const api = await fixture(context);
-  for (const [index, password] of [' '.repeat(15), 'x'.repeat(128)].entries()) {
+  for (const [index, password] of ['a'.repeat(12), 'a'.repeat(128), 'MixedCasePassword', '🌿'.repeat(12), '✈️'.repeat(64)].entries()) {
     const input = { email: `boundary${index}@example.com`, password };
     assert.equal((await api.request('/auth/register', { body: input })).status, 202);
     assert.equal((await api.request('/auth/login', { body: input })).status, 200);
+  }
+});
+
+test('signup rejects whitespace and Unicode passwords over 128 code points without storing or echoing them', async (context) => {
+  for (const [index, password] of [' abcdefghijkl', 'abcdefghijkl ', 'abcdef ghijkl', 'abcdef\tghijkl', 'abcdefghijkl\n', 'abcdef\u0085ghijkl', 'abcdef\u00a0ghijkl', 'abcdef\uFEFFghijkl', '🌿'.repeat(129), '✈️'.repeat(65), ''].entries()) {
+    await context.test(`invalid case ${index + 1}`, async (subcontext) => {
+      const api = await fixture(subcontext);
+      const response = await api.request('/auth/register', { body: { ...credentials, password } });
+      assert.equal(response.status, 400);
+      assert.equal(response.body.message, 'Invalid request body.');
+      assert.equal(api.calls.create.length, 0);
+    });
+  }
+});
+
+test('legacy passwords with whitespace or variation selectors still verify unchanged', async (context) => {
+  const api = await fixture(context);
+  for (const [index, password] of [' '.repeat(15), ' leading and trailing spaces ', '✈️'.repeat(128)].entries()) {
+    const id = randomUUID();
+    const email = `legacy${index}@example.com`;
+    api.users.set(id, { id, email, role: 'USER', createdAt: new Date(), updatedAt: new Date(), passwordHash: await argon2.hash(password) });
+    assert.equal((await api.request('/auth/login', { body: { email, password } })).status, 200);
   }
 });
 

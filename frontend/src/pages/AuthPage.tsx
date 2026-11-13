@@ -34,8 +34,8 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     event.preventDefault();
     if (request.current) return;
     const validation = {
-      ...validateCredentials(credentials),
-      confirmation: !isLogin && (!confirmation || confirmation !== credentials.password) ? 'Passwords must match.' : undefined,
+      ...validateCredentials(credentials, mode),
+      confirmation: isLogin ? undefined : !confirmation ? 'Confirm your password.' : confirmation !== credentials.password ? 'Passwords must match.' : undefined,
     };
     setErrors(validation);
     setFailure('');
@@ -96,7 +96,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
                 <label htmlFor="auth-password" className="text-sm font-medium">Password</label>
                 <input ref={passwordInput} id="auth-password" name="password" type={visible ? 'text' : 'password'} autoComplete={isLogin ? 'current-password' : 'new-password'} required value={credentials.password} onChange={(event) => setCredentials({ ...credentials, password: event.target.value })} aria-invalid={Boolean(errors.password)} aria-describedby="password-help password-error" className={inputClass} />
                 <button type="button" aria-controls={isLogin ? 'auth-password' : 'auth-password auth-confirmation'} onClick={() => setVisible(!visible)} className="text-link touch-target text-sm">{visible ? 'Hide password' : 'Show password'}</button>
-                <p id="password-help" className="mt-3 text-xs leading-5 text-muted">15–128 characters. Spaces are kept as entered.</p>
+                <p id="password-help" className="mt-3 text-xs leading-5 text-muted">{isLogin ? 'Enter your password exactly as you set it.' : 'Use 12–128 characters. Spaces are not allowed.'}</p>
                 <p id="password-error" className="mt-2 text-sm leading-6 text-ink">{errors.password}</p>
               </div>
               {!isLogin && <div>

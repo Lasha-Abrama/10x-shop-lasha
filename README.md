@@ -88,7 +88,7 @@ Do not use `db push`, reset/drop commands or a reset prompt to reconcile existin
 
 ## Authentication and checkout behavior
 
-Registration/login accept validated email and a **15–128-character password**. Emails are normalized; registration assigns `USER` and returns the same neutral acknowledgement for new/existing emails. Passwords use Argon2id. Login verifies `/auth/me` before authenticating the frontend. JWTs expire after 15 minutes and remain **only in React memory**: refresh, a new tab, logout or expiry returns to guest state. Tokens never enter browser storage, cookies or URLs; the saved bag is separate.
+Registration requires a **12–128 Unicode code point password** without whitespace or character-class requirements. Login still accepts previously valid passwords, including passwords with spaces. Emails are normalized; registration assigns `USER` and returns the same neutral acknowledgement for new/existing emails. Passwords use Argon2id. Login verifies `/auth/me` before authenticating the frontend. JWTs expire after 15 minutes and remain **only in React memory**: refresh, a new tab, logout or expiry returns to guest state. Tokens never enter browser storage, cookies or URLs; the saved bag is separate.
 
 The bag's versioned localStorage key is `10x-shop.cart.v1`; malformed/unsafe data recovers to an empty bag. Quantities are stock-bounded and totals use validated integer cents. Bag prices/stock are snapshots, not inventory guarantees.
 

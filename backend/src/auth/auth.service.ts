@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { argon2id, hash, verify } from 'argon2';
 import { Prisma, Role } from '../generated/prisma/client';
 import { PrismaService } from '../database/prisma.service';
-import { CredentialsDto } from './credentials.dto';
+import type { CredentialsDto, RegistrationCredentialsDto } from './credentials.dto';
 import { JWT_TTL_SECONDS } from './auth.config';
 
 const publicUserSelect = { id: true, email: true, role: true, createdAt: true, updatedAt: true } as const;
@@ -27,7 +27,7 @@ export class AuthService implements OnModuleInit {
     this.dummyHash = await hash(randomBytes(32), hashOptions);
   }
 
-  async register(credentials: CredentialsDto): Promise<{ message: string }> {
+  async register(credentials: RegistrationCredentialsDto): Promise<{ message: string }> {
     const passwordHash = await hash(credentials.password, hashOptions);
     try {
       await this.prisma.user.create({

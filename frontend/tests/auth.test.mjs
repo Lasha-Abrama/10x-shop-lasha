@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { authenticate, AuthApiError, getApiBaseUrl, parseAuthUser, registerAccount, REGISTRATION_ACK, validateCredentials } from '../src/api/auth.ts';
 import { authReducer, canAccessAccount, initialAuthState } from '../src/auth/state.ts';
 
+const registrationPassword = '🌿'.repeat(12);
 const credentials = { email: ' Shopper@EXAMPLE.com ', password: 'correct horse battery staple' };
 const user = { id: '3381026f-bc0d-466f-bab3-ef735b663c35', email: 'shopper@example.com', role: 'USER', createdAt: '2026-10-21T10:00:00.000Z', updatedAt: '2026-10-21T10:00:00.000Z' };
 const token = 'test.payload.signature';
@@ -18,14 +19,26 @@ test('API configuration accepts public HTTP bases and rejects credentials/query/
   }
 });
 
-test('credential validation follows 15–128 character policy, preserves spaces and supports Unicode passwords', () => {
+test('login accepts new passwords and preserves previously accepted whitespace and Unicode passwords', () => {
   assert.deepEqual(validateCredentials(credentials), {});
-  for (const password of ['x'.repeat(15), 'x'.repeat(128), ' '.repeat(15), '🌿'.repeat(15)]) {
+  for (const password of ['x'.repeat(12), 'x'.repeat(128), ' '.repeat(15), '🌿'.repeat(15), '✈️'.repeat(128)]) {
     assert.deepEqual(validateCredentials({ ...credentials, password }), {});
   }
-  for (const password of ['', 'x'.repeat(14), 'x'.repeat(129)]) assert.ok(validateCredentials({ ...credentials, password }).password);
+  for (const password of ['', 'x'.repeat(11)]) assert.ok(validateCredentials({ ...credentials, password }).password);
   for (const email of ['', 'missing-at.example.com', 'name@', 'name@example', 'a b@example.com', 'é@example.com']) {
     assert.ok(validateCredentials({ ...credentials, email }).email);
+  }
+});
+
+test('registration counts Unicode code points and rejects whitespace without composition rules', () => {
+  for (const password of ['a'.repeat(12), 'a'.repeat(128), 'lowercasepassphrase', 'MixedCasePassword', registrationPassword, '✈️'.repeat(64)]) {
+    assert.deepEqual(validateCredentials({ ...credentials, password }, 'register'), {});
+  }
+  for (const password of ['', 'a'.repeat(11), 'a'.repeat(129), '🌿'.repeat(129), '✈️'.repeat(65)]) {
+    assert.match(validateCredentials({ ...credentials, password }, 'register').password, /characters/);
+  }
+  for (const password of [' abcdefghijkl', 'abcdefghijkl ', 'abcdef ghijkl', 'abcdef\tghijkl', 'abcdefghijkl\n', 'abcdef\u0085ghijkl', 'abcdef\u00a0ghijkl', 'abcdef\uFEFFghijkl']) {
+    assert.match(validateCredentials({ ...credentials, password }, 'register').password, /whitespace/);
   }
 });
 
@@ -47,17 +60,17 @@ test('registration sends normalized credentials only and preserves the neutral d
     assert.equal(options.cache, 'no-store');
     assert.equal(options.redirect, 'error');
     assert.equal(options.headers['Content-Type'], 'application/json');
-    assert.deepEqual(JSON.parse(options.body), { email: user.email, password: credentials.password });
+    assert.deepEqual(JSON.parse(options.body), { email: user.email, password: registrationPassword });
     return Response.json({ message: REGISTRATION_ACK }, { status: 202 });
   });
-  assert.equal(await registerAccount(credentials, signal(), base), REGISTRATION_ACK);
-  assert.equal(await registerAccount(credentials, signal(), base), REGISTRATION_ACK);
+  assert.equal(await registerAccount({ ...credentials, password: registrationPassword }, signal(), base), REGISTRATION_ACK);
+  assert.equal(await registerAccount({ ...credentials, password: registrationPassword }, signal(), base), REGISTRATION_ACK);
   assert.equal(calls, 2);
 });
 
 test('registration never treats an unexpected success message as a confirmed new account', async (context) => {
   context.mock.method(globalThis, 'fetch', async () => Response.json({ message: 'Account definitely created!' }));
-  await assert.rejects(registerAccount(credentials, signal(), base), /unexpected response/);
+  await assert.rejects(registerAccount({ ...credentials, password: registrationPassword }, signal(), base), /unexpected response/);
 });
 
 test('login is confirmed by me before returning a memory session, using only a bearer header', async (context) => {
@@ -135,19 +148,19 @@ test('timeouts before headers and during JSON have distinct messaging without sw
   const timeout = new DOMException('Timed out', 'TimeoutError');
   const mock = context.mock.method(globalThis, 'fetch', async () => { throw timeout; });
   for (const request of [authenticate, registerAccount]) {
-    await assert.rejects(request(credentials, signal(), base), /took too long to respond/);
+    await assert.rejects(request({ ...credentials, password: registrationPassword }, signal(), base), /took too long to respond/);
   }
   mock.mock.mockImplementation(async () => ({ ok: true, json: async () => { throw timeout; } }));
-  await assert.rejects(registerAccount(credentials, signal(), base), /took too long to respond/);
+  await assert.rejects(registerAccount({ ...credentials, password: registrationPassword }, signal(), base), /took too long to respond/);
   const expired = new AbortController();
   expired.abort(timeout);
   context.mock.method(AbortSignal, 'timeout', () => expired.signal);
   mock.mock.mockImplementation(async () => ({ ok: true, json: async () => { throw new DOMException('Body aborted', 'AbortError'); } }));
-  await assert.rejects(registerAccount(credentials, signal(), base), /took too long to respond/);
+  await assert.rejects(registerAccount({ ...credentials, password: registrationPassword }, signal(), base), /took too long to respond/);
   const controller = new AbortController();
   controller.abort();
   mock.mock.mockImplementation(async (_url, options) => { options.signal.throwIfAborted(); });
-  await assert.rejects(registerAccount(credentials, controller.signal, base), { name: 'AbortError' });
+  await assert.rejects(registerAccount({ ...credentials, password: registrationPassword }, controller.signal, base), { name: 'AbortError' });
 });
 
 test('auth reducer protects guests, handles pending/login/logout, and rejects expired sessions', (context) => {

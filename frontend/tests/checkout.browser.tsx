@@ -146,16 +146,36 @@ async function run() {
   render(false, true, '/register?returnTo=%2Fcheckout');
   await waitFor(() => Boolean(container.querySelector('#auth-confirmation')));
   fill('email', user.email);
-  fill('password', 'not-a-real-password');
+  fill('password', 'abcdefghijk');
+  fill('auth-confirmation', 'abcdefghijk');
+  submit();
+  check(registrations.length === 0 && document.activeElement?.id === 'auth-password' && container.querySelector('#password-error')?.textContent === 'Use at least 12 characters.', 'Signup blocks a short password and focuses its error');
+  fill('password', 'abcdefghijkl');
+  fill('auth-confirmation', '');
+  submit();
+  check(registrations.length === 0 && container.querySelector('#confirmation-error')?.textContent === 'Confirm your password.', 'Signup requires confirmation');
   fill('auth-confirmation', 'different-password');
   submit();
   check(registrations.length === 0 && document.activeElement?.id === 'auth-confirmation' && container.querySelector('#confirmation-error')?.textContent === 'Passwords must match.', 'Mismatched passwords show an associated error and prevent registration');
-  fill('auth-confirmation', 'not-a-real-password');
+  fill('auth-confirmation', 'abcdefghijkl');
+  const visibility = [...container.querySelectorAll<HTMLButtonElement>('main button')].find((button) => button.textContent === 'Show password');
+  flushSync(() => visibility?.click());
+  check(container.querySelector<HTMLInputElement>('#auth-password')?.type === 'text' && container.querySelector<HTMLInputElement>('#auth-confirmation')?.type === 'text', 'Password toggle reveals both signup fields');
+  flushSync(() => visibility?.click());
+  check(container.querySelector<HTMLInputElement>('#auth-password')?.type === 'password' && container.querySelector<HTMLInputElement>('#auth-confirmation')?.type === 'password', 'Password toggle masks both signup fields again');
   submit(); submit();
   await waitFor(() => container.textContent?.includes('Request received.') === true);
-  check(JSON.stringify(registrations) === JSON.stringify([{ email: user.email, password: 'not-a-real-password' }]), 'Matching passwords send exactly one request without the confirmation value');
+  check(JSON.stringify(registrations) === JSON.stringify([{ email: user.email, password: 'abcdefghijkl' }]), 'Matching passwords send exactly one request without the confirmation value');
   check(document.documentElement.scrollWidth <= innerWidth, 'Registration fits the viewport');
-  check(container.querySelector('main a[href="/login?returnTo=%2Fcheckout"]'), 'Registration preserves the return to checkout');
+  const continueToLogin = container.querySelector<HTMLAnchorElement>('main a[href="/login?returnTo=%2Fcheckout"]');
+  check(continueToLogin, 'Registration preserves the return to checkout');
+  flushSync(() => continueToLogin?.click());
+  await waitFor(() => Boolean(container.querySelector('#auth-password')));
+  fill('email', user.email);
+  fill('password', 'abcdefghijkl');
+  submit();
+  await waitFor(() => Boolean(container.querySelector('#fullName')));
+  check(container.querySelector('output')?.getAttribute('data-route') === '/checkout' && itemCount() === '1', 'A 12-character signup password can sign in and return to checkout with the bag intact');
 
   for (const { path, destination, message } of [
     { path: '/login', destination: '/products', message: 'Independent mocked login returns to the catalog and preserves the bag' },

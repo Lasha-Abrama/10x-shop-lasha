@@ -28,10 +28,10 @@ export function App() {
         <Route path="orders" element={<OrdersPage />} />
         <Route path="orders/:id" element={<OrdersPage />} />
         <Route path="*" element={
-          <section className="page-width py-24">
-            <h1 className="font-display text-5xl">A little off the beaten path.</h1>
-            <p className="mt-5 text-muted">This page doesn’t exist. Let’s take you home.</p>
-            <Link className="text-link mt-8 inline-flex" to="/">Return to 10X Shop</Link>
+          <section className="page-width min-h-112 py-16 sm:py-24">
+            <h1 className="section-title">404 — Page not found</h1>
+            <p className="mt-6 max-w-lg text-base leading-7 text-muted">This page may have moved, or the address may be incorrect.</p>
+            <Link className="primary-link mt-8" to="/">Return to homepage</Link>
           </section>
         } />
       </Route>

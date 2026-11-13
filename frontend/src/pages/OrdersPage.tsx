@@ -46,7 +46,7 @@ function UserOrders({ id, token }: { id: string | undefined; token: string }) {
   }, [id, token, attempt, invalidateSession]);
 
   return <section className="page-width pb-20 pt-10 lg:pb-28 lg:pt-16">
-    <nav aria-label="Breadcrumb" className="mb-9 flex flex-wrap gap-3 text-xs text-muted"><Link className="nav-link" to="/account">Account</Link><span aria-hidden="true">/</span>{id ? <><Link className="nav-link" to="/orders">Your orders</Link><span aria-hidden="true">/</span><span aria-current="page">Order details</span></> : <span aria-current="page">Your orders</span>}</nav>
+    <nav aria-label="Breadcrumb" className="mb-9 flex flex-wrap gap-3 text-xs text-muted"><Link className="nav-link" to="/profile">Profile</Link><span aria-hidden="true">/</span>{id ? <><Link className="nav-link" to="/orders">Your orders</Link><span aria-hidden="true">/</span><span aria-current="page">Order details</span></> : <span aria-current="page">Your orders</span>}</nav>
     <div className="mb-10 border-b border-line pb-8"><h1 className="section-title">{id ? 'Your order.' : 'Your orders.'}</h1><p className="mt-5 max-w-xl text-base leading-7 text-muted">{id ? 'The selection and prices recorded for this order.' : 'A record of your selections, with the latest 50 orders shown first.'}</p></div>
     {state.kind === 'loading' && <p data-scroll-pending role="status" className="py-12 text-muted">Loading your {id ? 'order' : 'orders'}…</p>}
     {state.kind === 'error' && <div className="py-6"><h2 className="font-display text-3xl">{state.notFound ? 'Order not found.' : 'A moment out of reach.'}</h2><p role="alert" className="mt-5 max-w-lg text-sm leading-7 text-muted">{state.message}</p><div className="mt-6 flex flex-wrap items-center gap-6">{!state.notFound && <button type="button" className="primary-link" onClick={() => setAttempt((value) => value + 1)}>Try again</button>}<Link className="text-link inline-flex items-center text-sm" to={id ? '/orders' : '/products'}>{id ? 'Back to your orders' : 'Explore the collection'}</Link></div></div>}
@@ -83,7 +83,7 @@ function LoadedOrderHistory({ orders }: { orders: Order[] }) {
               <div><dt className="text-xs text-muted">Date</dt><dd className="mt-1"><time dateTime={order.createdAt}>{new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date(order.createdAt))}</time></dd></div>
               <div><dt className="text-xs text-muted">Items</dt><dd className="mt-1">{count} {count === 1 ? 'unit' : 'units'}</dd></div>
               <div><dt className="text-xs text-muted">Actual order status</dt><dd className="mt-1"><span className="inline-flex rounded-full border border-line bg-surface px-3 py-1 text-xs">{actualOrderStatusLabels[order.status]}</span></dd></div>
-              <div><dt className="text-xs text-muted">Demo fulfillment status</dt><dd className="mt-1"><DemoFulfillmentBadge createdAt={order.createdAt} now={now} /></dd></div>
+              <div><dt className="text-xs text-muted">Sample delivery status</dt><dd className="mt-1"><DemoFulfillmentBadge createdAt={order.createdAt} now={now} /></dd></div>
             </dl>
             <p className="mt-3 text-sm leading-6 text-muted wrap-anywhere">{order.items.map((item) => item.title).join(', ')}</p>
           </div>

@@ -168,7 +168,7 @@ async function child() {
     return;
   }
   await render();
-  check(container.textContent?.includes('Pending payment · unpaid') && container.textContent.includes('Simulated fulfillment timeline'), 'Real unpaid status and academic simulation remain visible');
+  check(container.textContent?.includes('Pending payment · unpaid') && container.textContent.includes('Sample delivery timeline'), 'Real unpaid status and academic simulation remain visible');
   check((button('Reorder')?.getBoundingClientRect().height ?? 0) >= 44 && button('Reorder')?.tabIndex === 0, 'Reorder is a native keyboard-focusable 44px button');
   button('Reorder')!.focus();
   check(document.activeElement === button('Reorder'), 'Reorder accepts keyboard focus');

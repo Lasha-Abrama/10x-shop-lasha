@@ -31,12 +31,17 @@ let orderMode: 'success' | 'failure' | 'uncertain' = 'success';
 let stock = 2;
 let detailFailure = false;
 let orderRequests = 0;
+const registrations: unknown[] = [];
 let detailRequests = 0;
 let payload: unknown;
 // No request falls through to the real backend or catalog.
 window.fetch = async (input, options) => {
   const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
   if (url.pathname === '/auth/login') return Response.json({ user, accessToken: 'fixture.payload.signature', tokenType: 'Bearer', expiresIn: 900 });
+  if (url.pathname === '/auth/register') {
+    registrations.push(JSON.parse(String(options?.body)));
+    return Response.json({ message: 'Registration request processed. You can try signing in.' }, { status: 202 });
+  }
   if (url.pathname === '/auth/me') return Response.json(user);
   if (url.pathname === '/products/1') {
     detailRequests += 1;
@@ -57,8 +62,9 @@ window.fetch = async (input, options) => {
   throw new Error('Unexpected fixture request');
 };
 
-const container = document.getElementById('root');
-if (!container) throw new Error('Missing test root');
+const host = document.getElementById('root');
+if (!host) throw new Error('Missing test root');
+const container: HTMLElement = host;
 const root = createRoot(container);
 const passed: string[] = [];
 function check(condition: unknown, message: string) {
@@ -103,17 +109,23 @@ function render(signedIn = true, filled = true, path = '/checkout') {
       <Route path="checkout" element={<CheckoutPage />} /><Route path="cart" element={<CartPage />} />
       <Route path="account" element={<AccountPage />} /><Route path="profile" element={<AccountPage />} />
       <Route path="products/:id" element={<ProductDetailsPage />} />
-      <Route path="login" element={<AuthPage mode="login" />} /><Route path="products" element={<section className="page-width py-12"><h1 className="section-title">The collection.</h1><div className="mt-8 max-w-80"><ProductCard product={product} /></div></section>} />
+      <Route path="login" element={<AuthPage key="login" mode="login" />} /><Route path="register" element={<AuthPage key="register" mode="register" />} /><Route path="products" element={<section className="page-width py-12"><h1 className="section-title">The collection.</h1><div className="mt-8 max-w-80"><ProductCard product={product} /></div></section>} />
     </Route></Routes></Setup>
   </CartProvider></AuthProvider></MemoryRouter>));
 }
 function fill(name: string, value: string) {
-  const input = container?.querySelector<HTMLInputElement>(`input[name="${name}"]`);
+  const input = container?.querySelector<HTMLInputElement>(`input[name="${name}"], input[id="${name}"]`);
   if (!input) throw new Error('Missing input');
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
   flushSync(() => input.dispatchEvent(new Event('input', { bubbles: true })));
 }
 function fillDetails() { fill('fullName', 'Test Student'); fill('address', '12 Sample Street'); fill('city', 'Tbilisi'); }
+function chooseSampleCard() {
+  for (const select of container!.querySelectorAll<HTMLSelectElement>('select[data-sample-card]')) {
+    select.selectedIndex = 1;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+}
 function submit() { flushSync(() => container?.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))); }
 const itemCount = () => container?.querySelector('output')?.getAttribute('data-items');
 
@@ -131,6 +143,20 @@ async function run() {
   stock = 2;
   detailRequests = 0;
 
+  render(false, true, '/register?returnTo=%2Fcheckout');
+  await waitFor(() => Boolean(container.querySelector('#auth-confirmation')));
+  fill('email', user.email);
+  fill('password', 'not-a-real-password');
+  fill('auth-confirmation', 'different-password');
+  submit();
+  check(registrations.length === 0 && document.activeElement?.id === 'auth-confirmation' && container.querySelector('#confirmation-error')?.textContent === 'Passwords must match.', 'Mismatched passwords show an associated error and prevent registration');
+  fill('auth-confirmation', 'not-a-real-password');
+  submit(); submit();
+  await waitFor(() => container.textContent?.includes('Request received.') === true);
+  check(JSON.stringify(registrations) === JSON.stringify([{ email: user.email, password: 'not-a-real-password' }]), 'Matching passwords send exactly one request without the confirmation value');
+  check(document.documentElement.scrollWidth <= innerWidth, 'Registration fits the viewport');
+  check(container.querySelector('main a[href="/login?returnTo=%2Fcheckout"]'), 'Registration preserves the return to checkout');
+
   for (const { path, destination, message } of [
     { path: '/login', destination: '/products', message: 'Independent mocked login returns to the catalog and preserves the bag' },
     { path: '/login?returnTo=https%3A%2F%2Fevil.example', destination: '/products', message: 'Unsafe external return falls back to the catalog and preserves the bag' },
@@ -138,6 +164,7 @@ async function run() {
   ]) {
     render(false, true, path);
     await waitFor(() => Boolean(container?.querySelector('input[name="password"]')));
+    check(!container.querySelector('#auth-confirmation'), 'Sign-in only asks for email and password');
     fill('email', user.email); fill('password', 'not-a-real-password'); submit();
     await waitFor(() => container?.querySelector('output')?.getAttribute('data-route') === destination);
     check(itemCount() === '1', message);
@@ -163,6 +190,11 @@ async function run() {
   check(orderRequests === 0 && document.activeElement?.id === 'fullName', 'Invalid form focuses the first error and sends no request');
   check(container?.querySelectorAll('[aria-invalid="true"]').length === 3, 'Required fields show associated validation errors');
   fillDetails();
+  submit();
+  check(document.documentElement.scrollWidth <= innerWidth, 'Checkout and sample payment controls fit the viewport');
+  check(orderRequests === 0 && document.activeElement?.getAttribute('id') === 'sample-number' && container.querySelector('#sample-card-error'), 'Missing test details focus the first sample field and block order creation');
+  check([...container.querySelectorAll<HTMLSelectElement>('select[data-sample-card]')].every((field) => field.options.length === 2 && !field.name), 'Card controls accept only a preset and have no serializable form names');
+  chooseSampleCard();
   orderMode = 'failure'; submit();
   check(Boolean(container?.querySelector('button[type="submit"]')?.hasAttribute('disabled')), 'Pending order submission is disabled');
   submit();
@@ -172,6 +204,12 @@ async function run() {
   orderMode = 'success'; submit();
   check(itemCount() === '1', 'Bag remains intact while awaiting confirmation');
   await waitFor(() => Boolean(container?.textContent?.includes('Order recorded.')));
+  const thumbnail = container.querySelector<HTMLImageElement>('main li img');
+  if (!thumbnail) throw new Error('Missing confirmation thumbnail');
+  check(thumbnail.getAttribute('src') === product.thumbnail, 'Confirmation matches a real cart thumbnail by confirmed product ID');
+  flushSync(() => thumbnail.dispatchEvent(new Event('error')));
+  check(container.textContent?.includes('Image unavailable') && !container.querySelector('main li img'), 'Failed thumbnail displays an accessible fallback');
+  check(!container.querySelector('[data-sample-card]') && ![...memory.values()].some((value) => value.includes('4242') || value.includes('09/29')), 'Sample controls unmount and values are absent from cart storage');
   check(itemCount() === '0', 'Confirmed success clears the bag and stays on confirmation');
   check(JSON.stringify(payload) === '{"items":[{"productId":1,"quantity":1}]}', 'Order payload contains only product ID and quantity, never form details or prices');
   check(container?.textContent?.includes('$10.99') && container?.textContent?.includes('Pending payment · unpaid'), 'Confirmation uses authoritative server total and truthful unpaid status');
@@ -181,7 +219,7 @@ async function run() {
 
   render(); orderMode = 'uncertain';
   await waitFor(() => Boolean(container?.querySelector('#fullName')));
-  fillDetails(); submit();
+  fillDetails(); chooseSampleCard(); submit();
   await waitFor(() => Boolean(container?.textContent?.includes('We can’t tell whether it was saved')));
   const requests = orderRequests; submit();
   check(orderRequests === requests && itemCount() === '1' && Boolean(container?.querySelector('button[type="submit"]')?.hasAttribute('disabled')), 'Uncertain outcome preserves the bag and prevents an immediate duplicate request');
@@ -201,7 +239,7 @@ async function run() {
   check(itemCount() === '2', 'Catalog failure leaves the bag intact');
   check(Boolean(container?.querySelector('a[href="/products"][aria-current="page"]')), 'Catalog navigation exposes the active page');
   flushSync(() => container?.querySelector<HTMLAnchorElement>('header a[href="/profile"]')?.click());
-  await waitFor(() => Boolean(container?.textContent?.includes('Account details')));
+  await waitFor(() => Boolean(container?.textContent?.includes('Profile details')));
   container?.querySelectorAll<HTMLButtonElement>('main button').forEach((button) => { if (button.textContent === 'Logout') flushSync(() => button.click()); });
   await waitFor(() => Boolean(container?.querySelector('header a[href="/login"]')) && container?.querySelector('output')?.getAttribute('data-route') === '/products');
   check(itemCount() === '2' && container?.querySelector('output')?.getAttribute('data-route') === '/products', 'Logout returns to the catalog without clearing the bag');

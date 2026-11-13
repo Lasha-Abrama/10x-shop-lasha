@@ -14,13 +14,16 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const [search] = useSearchParams();
   const returnTo = safeReturnTo(search.get('returnTo'));
   const [credentials, setCredentials] = useState<Credentials>({ email: '', password: '' });
-  const [errors, setErrors] = useState<Partial<Record<keyof Credentials, string>>>({});
+  const [confirmation, setConfirmation] = useState('');
+  const [visible, setVisible] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof Credentials | 'confirmation', string>>>({});
   const [failure, setFailure] = useState('');
   const [success, setSuccess] = useState('');
   const [pending, setPending] = useState(false);
   const request = useRef<AbortController | null>(null);
   const emailInput = useRef<HTMLInputElement>(null);
   const passwordInput = useRef<HTMLInputElement>(null);
+  const confirmationInput = useRef<HTMLInputElement>(null);
   const failureBox = useRef<HTMLParagraphElement>(null);
   const isLogin = mode === 'login';
 
@@ -30,11 +33,14 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (request.current) return;
-    const validation = validateCredentials(credentials);
+    const validation = {
+      ...validateCredentials(credentials),
+      confirmation: !isLogin && (!confirmation || confirmation !== credentials.password) ? 'Passwords must match.' : undefined,
+    };
     setErrors(validation);
     setFailure('');
-    if (validation.email || validation.password) {
-      (validation.email ? emailInput : passwordInput).current?.focus();
+    if (validation.email || validation.password || validation.confirmation) {
+      (validation.email ? emailInput : validation.password ? passwordInput : confirmationInput).current?.focus();
       return;
     }
     const controller = new AbortController();
@@ -48,7 +54,10 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
         const message = await register(credentials, controller.signal);
         if (!controller.signal.aborted) setSuccess(message);
       }
-      if (!controller.signal.aborted) setCredentials({ email: '', password: '' });
+      if (!controller.signal.aborted) {
+        setCredentials({ email: '', password: '' });
+        setConfirmation('');
+      }
     } catch (error: unknown) {
       if (!controller.signal.aborted) setFailure(error instanceof AuthApiError ? error.message : 'We couldn’t complete your request. Please try again.');
     } finally {
@@ -85,10 +94,19 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
               </div>
               <div>
                 <label htmlFor="auth-password" className="text-sm font-medium">Password</label>
-                <input ref={passwordInput} id="auth-password" name="password" type="password" autoComplete={isLogin ? 'current-password' : 'new-password'} required value={credentials.password} onChange={(event) => setCredentials({ ...credentials, password: event.target.value })} aria-invalid={Boolean(errors.password)} aria-describedby="password-help password-error" className={inputClass} />
+                <input ref={passwordInput} id="auth-password" name="password" type={visible ? 'text' : 'password'} autoComplete={isLogin ? 'current-password' : 'new-password'} required value={credentials.password} onChange={(event) => setCredentials({ ...credentials, password: event.target.value })} aria-invalid={Boolean(errors.password)} aria-describedby="password-help password-error" className={inputClass} />
+                <button type="button" aria-controls={isLogin ? 'auth-password' : 'auth-password auth-confirmation'} onClick={() => setVisible(!visible)} className="text-link touch-target text-sm">{visible ? 'Hide password' : 'Show password'}</button>
                 <p id="password-help" className="mt-3 text-xs leading-5 text-muted">15–128 characters. Spaces are kept as entered.</p>
                 <p id="password-error" className="mt-2 text-sm leading-6 text-ink">{errors.password}</p>
               </div>
+              {!isLogin && <div>
+                <label htmlFor="auth-confirmation" className="text-sm font-medium">Confirm password</label>
+                <input ref={confirmationInput} id="auth-confirmation" type={visible ? 'text' : 'password'} autoComplete="new-password" required value={confirmation} onChange={(event) => {
+                  setConfirmation(event.target.value);
+                  setErrors({ ...errors, confirmation: undefined });
+                }} aria-invalid={Boolean(errors.confirmation)} aria-describedby={errors.confirmation ? 'confirmation-error' : undefined} className={inputClass} />
+                {errors.confirmation && <p id="confirmation-error" role="alert" className="mt-2 text-sm text-accent">{errors.confirmation}</p>}
+              </div>}
               <button type="submit" disabled={pending} className="primary-link min-h-13 w-full disabled:cursor-wait disabled:opacity-60">{pending ? isLogin ? 'Signing in…' : 'Sending request…' : isLogin ? 'Login' : 'Create account'}<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 12h15m-6-6 6 6-6 6" /></svg></button>
             </fieldset>
             {failure && <p ref={failureBox} role="alert" tabIndex={-1} className="mt-6 border border-line bg-surface p-4 text-sm leading-6">{failure}</p>}

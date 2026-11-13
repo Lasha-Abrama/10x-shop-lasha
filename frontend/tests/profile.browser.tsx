@@ -90,7 +90,7 @@ async function child() {
     flushSync(() => root.render(<StrictMode key={++mount}><BrowserRouter><AuthProvider><CartProvider><Setup signedIn={signedIn} /></CartProvider></AuthProvider></BrowserRouter></StrictMode>));
     await waitFor(() => route === path && Boolean(document.querySelector('main h1')) && !document.querySelector('[data-scroll-pending]'));
   }
-  const details = () => document.querySelector('main h2')?.textContent === 'Account details';
+  const details = () => document.querySelector('main h2')?.textContent === 'Profile details';
   const guest = () => document.querySelector('main h1')?.textContent === 'Your account awaits.';
   function click(selector: string) {
     const element = document.querySelector<HTMLElement>(selector);
@@ -117,12 +117,15 @@ async function child() {
       await render(path); await waitFor(details); flushSync(() => seed());
       if (params.has('preview')) return; // Keep the isolated authenticated page available for keyboard/visual inspection.
       const snapshot = JSON.stringify(cart);
-      check(container.textContent?.includes(user.email) && container.textContent.includes('User') && container.textContent.includes('January 2, 2026'), `${path} displays only verified email, role and membership date`);
+      check(container.textContent?.includes(user.email) && container.textContent.includes('January 2, 2026'), `${path} displays verified email and membership date`);
       check(!container.textContent?.includes(uuid) && !document.querySelector('main input') && !document.querySelector('main form'), `${path} adds no invented identity fields or editing form`);
       const account = document.querySelector<HTMLAnchorElement>('header a[href="/profile"]')!;
-      check(account.textContent?.trim() === 'Account' && account.getAttribute('aria-current') === 'page', `${path} retains the Account label and active state`);
+      check(account.textContent?.trim() === 'Profile' && account.getAttribute('aria-current') === 'page', `${path} uses the Profile label and active state`);
       account.focus(); check(document.activeElement === account && account.getBoundingClientRect().height >= 44, `${path} Account link is keyboard-focusable with a 44px target`);
       const mainLinks = [...document.querySelectorAll<HTMLElement>('main a, main button')];
+      const logout = document.querySelector<HTMLButtonElement>('main button');
+      logout?.focus();
+      check(document.activeElement === logout && logout?.classList.contains('text-red-800') && logout.classList.contains('border-red-700'), `${path} Logout is keyboard-focusable and styled as destructive`);
       check(mainLinks.every((item) => item.getBoundingClientRect().height >= 44), `${path} account actions retain 44px targets`);
       const email = document.querySelector('dd')!.getBoundingClientRect();
       check(document.documentElement.scrollWidth <= innerWidth && email.right <= innerWidth && email.left >= 0, `${path} long email and layout fit ${width}px`);
@@ -158,7 +161,7 @@ async function child() {
       holdMe = false; releaseMe(); await pending; await waitFor(details);
     }
     role = 'ADMIN'; await render('/profile'); await waitFor(details);
-    check([...document.querySelectorAll('dd')].some((node) => node.textContent === 'Admin'), 'Verified ADMIN role displays accurately without adding admin functionality');
+    check(document.querySelectorAll('main dd').length === 2 && ![...document.querySelectorAll('main dd')].some((node) => node.textContent === 'Admin'), 'Profile hides the verified ADMIN role');
   }
   check(forbiddenWrites === 0, 'Profile invokes no account update, order, checkout or payment write');
   check(authCalls > 0 || params.get('reload') === 'after', 'Authenticated evidence uses isolated mocked login only');

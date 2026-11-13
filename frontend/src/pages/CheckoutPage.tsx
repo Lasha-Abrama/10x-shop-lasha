@@ -15,7 +15,7 @@ import { OrderSummary } from '../components/OrderSummary';
 import { formatPrice } from '../format';
 
 type Submission = { kind: 'ready' } | { kind: 'pending' }
-  | { kind: 'error'; message: string; uncertain: boolean } | { kind: 'confirmed'; order: Order; details: CheckoutDetails };
+  | { kind: 'error'; message: string; uncertain: boolean } | { kind: 'confirmed'; order: Order; details: CheckoutDetails; thumbnails: ReadonlyMap<number, string> };
 
 export function CheckoutPage() {
   const { user, accessToken, status } = useAuth();
@@ -29,6 +29,7 @@ function CheckoutSession({ token }: { token: string }) {
   const { invalidateSession, user } = useAuth();
   const [details, setDetails] = useState<CheckoutDetails>({ fullName: '', email: user?.email ?? '', address: '', city: '' });
   const [errors, setErrors] = useState<CheckoutErrors>({});
+  const [paymentError, setPaymentError] = useState('');
   const [submission, setSubmission] = useState<Submission>({ kind: 'ready' });
   const request = useRef<AbortController | null>(null);
   const messageBox = useRef<HTMLParagraphElement>(null);
@@ -54,13 +55,21 @@ function CheckoutSession({ token }: { token: string }) {
       if (field instanceof HTMLElement) field.focus();
       return;
     }
+    const payment = event.currentTarget.querySelectorAll<HTMLSelectElement>('select[data-sample-card]');
+    const firstMissing = Array.from(payment).find((field) => !field.value);
+    if (firstMissing) {
+      setPaymentError(firstMissing.id);
+      firstMissing.focus();
+      return;
+    }
+    setPaymentError('');
     const controller = new AbortController();
     request.current = controller;
     setSubmission({ kind: 'pending' });
     try {
       await placeCartOrder(cart, token, controller.signal, (order) => {
         dispatch({ type: 'clear' });
-        setSubmission({ kind: 'confirmed', order, details: {
+        setSubmission({ kind: 'confirmed', order, thumbnails: new Map(cart.items.map((item) => [item.id, item.thumbnail])), details: {
           fullName: details.fullName.trim(), email: details.email.trim(), address: details.address.trim(), city: details.city.trim(),
         } });
       });
@@ -75,7 +84,7 @@ function CheckoutSession({ token }: { token: string }) {
   if (submission.kind === 'confirmed') return <section className="page-width pb-20 pt-12 sm:pt-16 lg:pb-28">
     <h1 ref={heading} tabIndex={-1} className="section-title">Order recorded.</h1>
     <p role="status" className="mb-10 mt-5 max-w-xl text-base leading-7 text-muted">Thank you! Your order has been placed. No payment was taken.</p>
-    <OrderSummary order={submission.order} />
+    <OrderSummary order={submission.order} thumbnails={submission.thumbnails} />
     <section aria-labelledby="demo-details" className="mt-10 border-t border-line pt-8">
       <h2 id="demo-details" className="font-display text-3xl">Your details.</h2>
       <p className="mt-3 max-w-xl text-sm leading-7 text-muted">Shown only in this confirmation. These details were not sent to the server or saved. No shipping is arranged.</p>
@@ -114,6 +123,26 @@ function CheckoutSession({ token }: { token: string }) {
                 }} aria-invalid={Boolean(errors[field.name])} aria-describedby={errors[field.name] ? `${field.name}-error` : undefined}
                 className="mt-2 min-h-13 w-full rounded-editorial border border-muted bg-paper px-4 py-3 text-base caret-accent hover:border-ink disabled:opacity-60" />
               {errors[field.name] && <p id={`${field.name}-error`} role="alert" className="mt-2 text-sm leading-6 text-accent">{errors[field.name]}</p>}
+            </div>)}
+          </div>
+        </fieldset>
+        <fieldset disabled={pending || (submission.kind === 'error' && submission.uncertain)} aria-describedby="sample-card-note" className="mb-12 rounded-editorial border border-line px-4 pb-6 sm:px-6">
+          <legend className="px-2 font-display text-3xl">Test payment</legend>
+          <p id="sample-card-note" className="mb-5 mt-3 text-sm leading-6 text-muted">No charge will be made. Choose the sample values below. Use test details only.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[
+              { id: 'sample-number', label: 'Test card number', value: '4242 4242 4242 4242' },
+              { id: 'sample-expiry', label: 'Test expiry', value: new Date() < new Date(2029, 9, 1) ? '09/29' : `12/${String(new Date().getFullYear() + 1).slice(-2)}` },
+              { id: 'sample-code', label: 'Test security code', value: '123' },
+            ].map(({ id, label, value }) => <div key={id} className={id === 'sample-number' ? 'sm:col-span-2' : undefined}>
+              <label htmlFor={id} className="text-sm font-medium">{label}</label>
+              <select id={id} data-sample-card required defaultValue="" onChange={() => { if (paymentError === id) setPaymentError(''); }}
+                aria-invalid={paymentError === id} aria-describedby={paymentError === id ? 'sample-card-error' : undefined}
+                className="mt-2 min-h-13 w-full rounded-editorial border border-muted bg-paper px-3 text-base disabled:opacity-60">
+                <option value="">Choose sample value</option>
+                <option value={value}>{value}</option>
+              </select>
+              {paymentError === id && <p id="sample-card-error" role="alert" className="mt-2 text-sm text-accent">Choose a sample value to continue.</p>}
             </div>)}
           </div>
         </fieldset>

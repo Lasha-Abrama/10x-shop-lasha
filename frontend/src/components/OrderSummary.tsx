@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import type { Order } from '../api/orders';
 import { formatPrice } from '../format';
 import { actualOrderStatusLabels } from '../orders/status';
 
-export function OrderSummary({ order }: { order: Order }) {
+export function OrderSummary({ order, thumbnails }: { order: Order; thumbnails?: ReadonlyMap<number, string> }) {
   return <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16">
     <div className="min-w-0">
       <dl className="mb-8 grid gap-5 border-b border-line pb-7 text-sm sm:grid-cols-2">
@@ -13,7 +14,8 @@ export function OrderSummary({ order }: { order: Order }) {
       <h2 className="font-display text-3xl">Your selection.</h2>
       <ul className="mt-5 divide-y divide-line border-b border-line">
         {order.items.map((item) => <li key={item.id} className="flex flex-wrap items-start justify-between gap-4 py-6">
-          <div className="min-w-0 flex-1 basis-44"><h3 className="font-display text-2xl leading-tight wrap-anywhere"><Link className="nav-link" to={`/products/${item.productId}`}>{item.title}</Link></h3><p className="mt-2 text-sm text-muted">{item.quantity} × {formatPrice(item.unitPriceCents / 100)}</p></div>
+          <OrderThumbnail src={thumbnails?.get(item.productId)} />
+          <div className="min-w-0 flex-1 basis-32"><h3 className="font-display text-2xl leading-tight wrap-anywhere"><Link className="nav-link" to={`/products/${item.productId}`}>{item.title}</Link></h3><p className="mt-2 text-sm text-muted">{item.quantity} × {formatPrice(item.unitPriceCents / 100)}</p></div>
           <p className="pt-1 text-sm tabular-nums">{formatPrice(item.lineTotalCents / 100)}</p>
         </li>)}
       </ul>
@@ -24,5 +26,14 @@ export function OrderSummary({ order }: { order: Order }) {
       <dl className="mt-7 border-y border-line py-5"><div className="flex flex-wrap justify-between gap-3"><dt>Total (USD)</dt><dd className="tabular-nums">{formatPrice(order.totalCents / 100)}</dd></div></dl>
       <p className="mt-4 text-xs leading-6 text-muted">This is the server-confirmed item total. No tax, shipping charge, or discount has been added.</p>
     </aside>
+  </div>;
+}
+
+function OrderThumbnail({ src }: { src?: string }) {
+  const [failed, setFailed] = useState(false);
+  return <div className="flex size-16 shrink-0 items-center justify-center rounded-editorial bg-surface">
+    {src && !failed
+      ? <img src={src} alt="" width="64" height="64" className="size-full object-contain" onError={() => setFailed(true)} />
+      : <span className="px-1 text-center text-xs text-muted">Image unavailable</span>}
   </div>;
 }

@@ -124,12 +124,6 @@ function fill(name: string, value: string) {
   flushSync(() => input.dispatchEvent(new Event('input', { bubbles: true })));
 }
 function fillDetails() { fill('fullName', 'Test Student'); fill('address', '12 Sample Street'); fill('city', 'Tbilisi'); }
-function chooseSampleCard() {
-  for (const select of container!.querySelectorAll<HTMLSelectElement>('select[data-sample-card]')) {
-    select.selectedIndex = 1;
-    select.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-}
 function submit() { flushSync(() => container?.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))); }
 const itemCount = () => container?.querySelector('output')?.getAttribute('data-items');
 
@@ -214,11 +208,12 @@ async function run() {
   check(orderRequests === 0 && document.activeElement?.id === 'fullName', 'Invalid form focuses the first error and sends no request');
   check(container?.querySelectorAll('[aria-invalid="true"]').length === 3, 'Required fields show associated validation errors');
   fillDetails();
-  submit();
-  check(document.documentElement.scrollWidth <= innerWidth, 'Checkout and sample payment controls fit the viewport');
-  check(orderRequests === 0 && document.activeElement?.getAttribute('id') === 'sample-number' && container.querySelector('#sample-card-error'), 'Missing test details focus the first sample field and block order creation');
-  check([...container.querySelectorAll<HTMLSelectElement>('select[data-sample-card]')].every((field) => field.options.length === 2 && !field.name), 'Card controls accept only a preset and have no serializable form names');
-  chooseSampleCard();
+  const demoCard = container.querySelector('section[aria-labelledby="sample-card-heading"]');
+  check(document.documentElement.scrollWidth <= innerWidth, 'Checkout and sample payment details fit the viewport');
+  check(demoCard?.querySelector('[aria-hidden="true"]')?.textContent === '•••• •••• •••• 4242'
+    && demoCard?.querySelector('.sr-only')?.textContent === 'Card ending in 4242', 'Demo card exposes only its last four digits');
+  check([...demoCard?.querySelectorAll('dd') ?? []].slice(1).map((field) => field.textContent).join(',') === '09/29,123'
+    && !demoCard?.querySelector('input, select, button'), 'Expiry and CVV are displayed without interactive controls');
   orderMode = 'failure'; submit();
   check(Boolean(container?.querySelector('button[type="submit"]')?.hasAttribute('disabled')), 'Pending order submission is disabled');
   submit();
@@ -233,7 +228,7 @@ async function run() {
   check(thumbnail.getAttribute('src') === product.thumbnail, 'Confirmation matches a real cart thumbnail by confirmed product ID');
   flushSync(() => thumbnail.dispatchEvent(new Event('error')));
   check(container.textContent?.includes('Image unavailable') && !container.querySelector('main li img'), 'Failed thumbnail displays an accessible fallback');
-  check(!container.querySelector('[data-sample-card]') && ![...memory.values()].some((value) => value.includes('4242') || value.includes('09/29')), 'Sample controls unmount and values are absent from cart storage');
+  check(!container.querySelector('#sample-card-heading') && ![...memory.values()].some((value) => value.includes('4242') || value.includes('09/29')), 'Sample card unmounts and values are absent from cart storage');
   check(itemCount() === '0', 'Confirmed success clears the bag and stays on confirmation');
   check(JSON.stringify(payload) === '{"items":[{"productId":1,"quantity":1}]}', 'Order payload contains only product ID and quantity, never form details or prices');
   check(container?.textContent?.includes('$10.99') && container?.textContent?.includes('Pending payment · unpaid'), 'Confirmation uses authoritative server total and truthful unpaid status');
@@ -243,7 +238,7 @@ async function run() {
 
   render(); orderMode = 'uncertain';
   await waitFor(() => Boolean(container?.querySelector('#fullName')));
-  fillDetails(); chooseSampleCard(); submit();
+  fillDetails(); submit();
   await waitFor(() => Boolean(container?.textContent?.includes('We can’t tell whether it was saved')));
   const requests = orderRequests; submit();
   check(orderRequests === requests && itemCount() === '1' && Boolean(container?.querySelector('button[type="submit"]')?.hasAttribute('disabled')), 'Uncertain outcome preserves the bag and prevents an immediate duplicate request');

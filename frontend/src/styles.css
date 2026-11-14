@@ -31,7 +31,7 @@
 }
 
 @layer base {
-  html { scroll-behavior: smooth; scrollbar-color: var(--color-muted) var(--color-paper); }
+  html { scroll-behavior: smooth; scroll-padding-top: 5rem; scrollbar-color: var(--color-muted) var(--color-paper); }
   body { margin: 0; background: var(--color-paper); color: var(--color-ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
   h1, h2, h3 { text-wrap: balance; }
   ::selection { background: var(--color-ink); color: var(--color-paper); }
@@ -61,6 +61,11 @@
   .soon-label { font-size: 0.625rem; line-height: 1; }
   .skip-link { position: fixed; top: 1rem; left: 1rem; z-index: 50; transform: translateY(-200%); padding: 0.875rem 1.25rem; background: var(--color-ink); color: var(--color-paper); }
   .skip-link:focus { transform: translateY(0); }
+}
+
+@media (width < 480px) {
+  /* The wordmark and actions occupy two rows on narrow screens. */
+  html { scroll-padding-top: 8.25rem; }
 }
 
 @media (forced-colors: active) {

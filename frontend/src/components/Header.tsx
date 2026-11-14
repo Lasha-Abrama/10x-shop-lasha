@@ -28,7 +28,7 @@ export function Header() {
   }
 
   return (
-    <header className="border-b border-line bg-paper" onKeyDown={(event) => {
+    <header className="sticky top-0 z-40 border-b border-line bg-paper" onKeyDown={(event) => {
       if (event.key === 'Escape' && menuOpen) {
         setMenuOpen(false);
         menuButton.current?.focus();
@@ -59,7 +59,7 @@ export function Header() {
             {menuOpen ? 'Close' : 'Menu'}
           </button>
         </div>
-        <nav id="mobile-navigation" aria-label="Mobile navigation" hidden={!menuOpen} className="col-span-full w-full border-t border-line pt-3 xl:hidden">
+        <nav id="mobile-navigation" aria-label="Mobile navigation" hidden={!menuOpen} className="col-span-full max-h-[50dvh] w-full overflow-y-auto border-t border-line pt-3 xl:hidden">
           {links.map((item) => <Link key={item.href} to={item.href} onClick={() => setMenuOpen(false)} aria-current={isCurrent(item.href) ? 'page' : undefined} className={`nav-link touch-target block py-3 text-base ${isCurrent(item.href) ? 'underline underline-offset-4' : ''}`}>{item.label}</Link>)}
         </nav>
       </div>

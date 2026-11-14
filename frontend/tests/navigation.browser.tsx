@@ -153,6 +153,18 @@ async function run() {
   await waitFor(() => ready() && Boolean(document.querySelector('article')) && document.fonts.status === 'loaded');
   check(scrollY === 0, 'Initial navigation starts at the top');
   if (keyboardOnly) return;
+  const header = document.querySelector('header')!;
+  const menu = header.querySelector<HTMLButtonElement>('button[aria-controls="mobile-navigation"]')!;
+  const mobile = menu.getClientRects().length > 0;
+  if (mobile) menu.click();
+  click(`header nav[aria-label="${mobile ? 'Mobile navigation' : 'Main navigation'}"] a[href="/#collections"]`);
+  await waitFor(() => location.hash === '#collections' && document.activeElement?.id === 'collections');
+  const section = document.getElementById('collections')!.getBoundingClientRect();
+  const headerBounds = header.getBoundingClientRect();
+  check(scrollY > 0 && Math.abs(headerBounds.top) < 1 && headerBounds.bottom <= section.top && section.top < innerHeight,
+    'Header stays visible and the linked section lands below it');
+  click('header a[href="/products"]');
+  await waitFor(() => ready() && location.pathname === '/products' && scrollY === 0);
   focusChecks();
 
   const returnLink = () => [...document.querySelectorAll<HTMLAnchorElement>('main a')].find((link) => link.textContent === 'Back to all products');

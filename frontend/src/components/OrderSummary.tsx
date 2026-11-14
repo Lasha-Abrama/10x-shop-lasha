@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import type { Order } from '../api/orders';
+import { getProductDetails } from '../api/products';
 import { formatPrice } from '../format';
 import { actualOrderStatusLabels } from '../orders/status';
 
@@ -14,7 +15,7 @@ export function OrderSummary({ order, thumbnails }: { order: Order; thumbnails?:
       <h2 className="font-display text-3xl">Your selection.</h2>
       <ul className="mt-5 divide-y divide-line border-b border-line">
         {order.items.map((item) => <li key={item.id} className="flex flex-wrap items-start justify-between gap-4 py-6">
-          <OrderThumbnail src={thumbnails?.get(item.productId)} />
+          <OrderThumbnail productId={item.productId} src={thumbnails?.get(item.productId)} />
           <div className="min-w-0 flex-1 basis-32"><h3 className="font-display text-2xl leading-tight wrap-anywhere"><Link className="nav-link" to={`/products/${item.productId}`}>{item.title}</Link></h3><p className="mt-2 text-sm text-muted">{item.quantity} × {formatPrice(item.unitPriceCents / 100)}</p></div>
           <p className="pt-1 text-sm tabular-nums">{formatPrice(item.lineTotalCents / 100)}</p>
         </li>)}
@@ -29,11 +30,29 @@ export function OrderSummary({ order, thumbnails }: { order: Order; thumbnails?:
   </div>;
 }
 
-function OrderThumbnail({ src }: { src?: string }) {
-  const [failed, setFailed] = useState(false);
+function OrderThumbnail({ productId, src }: { productId: number; src?: string }) {
+  const [catalogSrc, setCatalogSrc] = useState<string | null>();
+  const [failedSrc, setFailedSrc] = useState<string>();
+
+  // შეკვეთის ისტორიაში მხოლოდ productId გვაქვს, ამიტომ სურათს კატალოგიდან ვიღებთ.
+  useEffect(() => {
+    if (src) return;
+    const controller = new AbortController();
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]);
+    void getProductDetails(String(productId), signal)
+      .then((product) => {
+        if (!controller.signal.aborted) setCatalogSrc(product?.thumbnail ?? null);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCatalogSrc(null);
+      });
+    return () => controller.abort();
+  }, [productId, src]);
+
+  const image = src ?? catalogSrc;
   return <div className="flex size-16 shrink-0 items-center justify-center rounded-editorial bg-surface">
-    {src && !failed
-      ? <img src={src} alt="" width="64" height="64" className="size-full object-contain" onError={() => setFailed(true)} />
-      : <span className="px-1 text-center text-xs text-muted">Image unavailable</span>}
+    {image && image !== failedSrc
+      ? <img src={image} alt="" width="64" height="64" className="size-full object-contain" onError={() => setFailedSrc(image)} />
+      : <span className="px-1 text-center text-xs text-muted">{!src && catalogSrc === undefined ? 'Loading image…' : 'Image unavailable'}</span>}
   </div>;
 }

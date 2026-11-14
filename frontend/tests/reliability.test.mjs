@@ -119,7 +119,7 @@ test('product detail return links use validated catalog state and safely handle 
   }
 });
 
-test('guest header has one login before the bag and keeps registration on the auth page', async () => {
+test('guest header has one login after the bag and keeps registration on the auth page', async () => {
   const { Header } = await server.ssrLoadModule('/src/components/Header.tsx');
   const { AuthProvider } = await server.ssrLoadModule('/src/auth/AuthContext.tsx');
   const { CartProvider } = await server.ssrLoadModule('/src/cart/CartContext.tsx');
@@ -129,8 +129,8 @@ test('guest header has one login before the bag and keeps registration on the au
   assert.equal((html.match(/href="\/login"/g) ?? []).length, 1);
   assert.doesNotMatch(html, /href="\/register"/);
   assert.doesNotMatch(html, /href="\/orders"/);
-  assert.ok(html.indexOf('aria-label="Search products"') < html.indexOf('href="/login"'));
-  assert.ok(html.indexOf('href="/login"') < html.indexOf('href="/cart"'));
+  assert.ok(html.indexOf('aria-label="Search products"') < html.indexOf('href="/cart"'));
+  assert.ok(html.indexOf('href="/cart"') < html.indexOf('href="/login"'));
   assert.match(html, /Log in/);
 });
 

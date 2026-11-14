@@ -46,15 +46,15 @@ export function Header() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>
             <span className="hidden sm:inline">Search</span>
           </Link>
-          <Link to={accountPath} onClick={() => setMenuOpen(false)} aria-current={accountActive ? 'page' : undefined} className={`nav-link touch-target justify-center gap-1.5 px-1 text-sm ${accountActive ? 'underline underline-offset-4' : ''}`}>
-            <svg className="shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>
-            {user ? 'Profile' : 'Log in'}
-          </Link>
           <NavLink to="/cart" onClick={() => setMenuOpen(false)} className={({ isActive }) => `nav-link touch-target justify-center gap-1.5 text-sm ${isActive ? 'underline underline-offset-4' : ''}`} aria-label={`Shopping bag, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 7h14l1 14H4L5 7Z" /><path d="M8 8V6a4 4 0 0 1 8 0v2" /></svg>
             <span className="hidden sm:inline">Bag</span>
             {itemCount > 0 && <span className="min-w-4 text-center text-xs tabular-nums" aria-live="polite" aria-atomic="true">{itemCount}</span>}
           </NavLink>
+          <Link to={accountPath} onClick={() => setMenuOpen(false)} aria-current={accountActive ? 'page' : undefined} className={`nav-link touch-target justify-center gap-1.5 px-1 text-sm ${accountActive ? 'underline underline-offset-4' : ''}`}>
+            <svg className="shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>
+            {user ? 'Profile' : 'Log in'}
+          </Link>
           <button ref={menuButton} type="button" className="nav-link touch-target justify-center px-1 text-sm xl:hidden" aria-expanded={menuOpen} aria-controls="mobile-navigation" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? 'Close' : 'Menu'}
           </button>

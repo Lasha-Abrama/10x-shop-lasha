@@ -102,7 +102,7 @@ async function child() {
   const login = header.querySelector<HTMLAnchorElement>('a[href="/login"]')!;
   check(header.querySelectorAll('a[href="/login"]').length === 1 && !header.querySelector('a[href="/register"]'), 'One guest login; registration is not duplicated');
   const actions = [...header.querySelectorAll<HTMLAnchorElement>('a')].filter((a) => ['Search products', 'Log in', 'Shopping bag, 0 items'].includes(a.getAttribute('aria-label') ?? a.textContent?.trim() ?? ''));
-  check(actions.length === 3 && actions[1] === login, 'Search, login, bag order');
+  check(actions.length === 3 && actions[0].getAttribute('aria-label') === 'Search products' && actions[1].getAttribute('href') === '/cart' && actions[2] === login, 'Search, bag, login order');
   for (const a of actions) {
     const box = a.getBoundingClientRect();
     check(box.width >= 44 && box.height >= 44, 'Header action has a 44px target');

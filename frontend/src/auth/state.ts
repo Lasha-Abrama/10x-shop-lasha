@@ -9,7 +9,7 @@ export type AuthAction =
   | { type: 'authenticated'; session: AuthSession }
   | { type: 'guest'; notice?: string };
 
-export const initialAuthState: AuthState = { status: 'guest', session: null, notice: null };
+export const initialAuthState: AuthState = { status: 'authenticating', session: null, notice: null };
 export function authReducer(_state: AuthState, action: AuthAction): AuthState {
   if (action.type === 'begin') return { status: 'authenticating', session: null, notice: null };
   if (action.type === 'authenticated' && action.session.expiresAt > Date.now()) {

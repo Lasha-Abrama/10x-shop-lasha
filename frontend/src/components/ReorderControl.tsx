@@ -9,7 +9,7 @@ import type { ReorderLookupOutcome } from '../orders/reorder';
 
 type FeedbackLine = { productId: number; title: string; quantity: number; added: boolean; reason: string };
 type Feedback = { requestId: string; userId: string; lines: FeedbackLine[] };
-type Operation = { requestId: string; userId: string; orderId: string; token: string; controller: AbortController;
+type Operation = { requestId: string; userId: string; orderId: string; controller: AbortController;
   outcomes: ReorderLookupOutcome[]; committing: boolean };
 const reasons: Record<string, string> = {
   missing: 'No longer available.', 'out-of-stock': 'Out of stock.',
@@ -44,23 +44,23 @@ function ReorderFeedback({ feedback }: { feedback: Feedback }) {
 }
 
 export function ReorderControl({ order }: { order: Order }) {
-  const { user, accessToken } = useAuth();
+  const { user } = useAuth();
   const { dispatch, reorderResult } = useCart();
   const navigate = useNavigate();
   const active = useRef<Operation | null>(null);
-  const identity = useRef({ userId: user?.id, orderId: order.id, token: accessToken });
+  const identity = useRef({ userId: user?.id, orderId: order.id });
   const [pending, setPending] = useState<'lookup' | 'commit' | null>(null);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   useLayoutEffect(() => {
-    identity.current = { userId: user?.id, orderId: order.id, token: accessToken };
+    identity.current = { userId: user?.id, orderId: order.id };
     return () => { active.current?.controller.abort(); active.current = null; };
-  }, [user?.id, order.id, accessToken]);
+  }, [user?.id, order.id]);
 
   function current(operation: Operation) {
     return active.current === operation && !operation.controller.signal.aborted
-      && identity.current.userId === operation.userId && identity.current.orderId === operation.orderId && identity.current.token === operation.token;
+      && identity.current.userId === operation.userId && identity.current.orderId === operation.orderId;
   }
 
   useEffect(() => {
@@ -75,8 +75,8 @@ export function ReorderControl({ order }: { order: Order }) {
   }, [reorderResult, navigate]);
 
   async function reorder() {
-    if (active.current || !user || !accessToken) return;
-    const operation: Operation = { requestId: crypto.randomUUID(), userId: user.id, orderId: order.id, token: accessToken,
+    if (active.current || !user) return;
+    const operation: Operation = { requestId: crypto.randomUUID(), userId: user.id, orderId: order.id,
       controller: new AbortController(), outcomes: [], committing: false };
     active.current = operation;
     setPending('lookup'); setError(''); setFeedback(null);

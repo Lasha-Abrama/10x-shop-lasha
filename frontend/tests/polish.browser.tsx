@@ -58,21 +58,24 @@ async function child() {
     createdAt: '2026-11-08T10:00:00Z', updatedAt: '2026-11-08T10:00:00Z',
     items: [{ id: '00000000-0000-4000-8000-000000000100', productId: 1, title: 'Recorded selection', quantity: 2, unitPriceCents: 1234, lineTotalCents: 2468 }] };
   const olderOrder = { ...order, id: '00000000-0000-4000-8000-000000000001', createdAt: '2026-11-07T10:00:00Z' };
+  let sessionActive = false;
   window.fetch = async (input, options) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
-    if (url.pathname === '/auth/login') return Response.json({ user, accessToken: 'mock.payload.signature', expiresIn: 900, tokenType: 'Bearer' });
-    if (url.pathname === '/auth/me') return Response.json(user);
-    if (url.pathname.startsWith('/orders')) {
+    const pathname = url.pathname.replace(/^\/api\//, '/');
+    if (pathname === '/auth/login') { sessionActive = true; return Response.json({ user }); }
+    if (pathname === '/auth/session') return sessionActive ? Response.json({ user, expiresAt: Date.now() + 900_000 }) : new Response(null, { status: 401 });
+    if (pathname === '/auth/logout') { sessionActive = false; return new Response(null, { status: 204 }); }
+    if (pathname.startsWith('/orders')) {
       check(options?.method === 'GET', 'Order fixture permits GET reads only');
       orderReads += 1;
       const mode = orderMode;
       await new Promise((resolve) => setTimeout(resolve, orderDelay));
       if (mode === 'error') return Response.json({}, { status: 503 });
-      if (url.pathname !== '/orders') return mode === 'missing' ? Response.json({}, { status: 404 }) : Response.json(order);
+      if (pathname !== '/orders') return mode === 'missing' ? Response.json({}, { status: 404 }) : Response.json(order);
       return Response.json(mode === 'empty' ? [] : [order, olderOrder]);
     }
-    if (url.pathname === '/products/categories') return Response.json([{ slug: 'beauty', name: 'Beauty' }]);
-    if (url.pathname.startsWith('/products')) {
+    if (pathname === '/products/categories') return Response.json([{ slug: 'beauty', name: 'Beauty' }]);
+    if (pathname.startsWith('/products')) {
       await new Promise((resolve) => setTimeout(resolve, delay));
       const skip = Number(url.searchParams.get('skip') ?? 0);
       const limit = url.searchParams.get('limit') === '0' ? 24 : 12;

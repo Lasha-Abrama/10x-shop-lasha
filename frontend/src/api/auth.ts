@@ -6,7 +6,7 @@ export type AuthUser = {
   updatedAt: string;
 };
 export type Credentials = { email: string; password: string };
-export type AuthSession = { user: AuthUser; token: string; expiresAt: number };
+export type AuthSession = { user: AuthUser; expiresAt: number };
 export const REGISTRATION_ACK = 'Registration request processed. You can try signing in.';
 const timeoutMessage = 'The account service took too long to respond. Please try again.';
 
@@ -31,7 +31,10 @@ export function validateCredentials(credentials: Credentials, mode: 'login' | 'r
   return errors;
 }
 
-export function getApiBaseUrl(value: string = import.meta.env?.VITE_API_BASE_URL ?? 'http://localhost:3000'): string {
+export const sessionHeaders = { 'X-Shop-Session': 'browser' };
+
+export function getApiBaseUrl(value = '/api'): string {
+  if (value === '/api') return typeof location === 'undefined' ? value : `${location.origin}${value}`;
   try {
     const url = new URL(value);
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error();
@@ -63,7 +66,7 @@ async function request(path: string, signal: AbortSignal, options: RequestInit, 
   try {
     response = await fetch(`${getApiBaseUrl(baseUrl)}${path}`, {
       ...options, signal: AbortSignal.any([signal, timeout]),
-      credentials: 'omit', cache: 'no-store', redirect: 'error',
+      credentials: 'same-origin', cache: 'no-store', redirect: 'error',
     });
   } catch (error: unknown) {
     if (signal.aborted || error instanceof AuthApiError) throw error;
@@ -79,6 +82,7 @@ async function request(path: string, signal: AbortSignal, options: RequestInit, 
       : 'The account service is unavailable. Please try again later.';
     throw new AuthApiError(message, response.status);
   }
+  if (response.status === 204) return null;
   try { return await response.json(); }
   catch (error: unknown) {
     if (signal.aborted) throw error;
@@ -101,19 +105,31 @@ export async function registerAccount(credentials: Credentials, signal: AbortSig
   return REGISTRATION_ACK;
 }
 
+export async function restoreSession(signal: AbortSignal, baseUrl?: string): Promise<AuthSession | null> {
+  try {
+    const data = await request('/auth/session', signal, { headers: sessionHeaders }, baseUrl);
+    if (!record(data) || typeof data.expiresAt !== 'number' || !Number.isSafeInteger(data.expiresAt)) throw invalidResponse();
+    return { user: parseAuthUser(data.user), expiresAt: data.expiresAt };
+  } catch (error) {
+    if (error instanceof AuthApiError && error.status === 401) return null;
+    throw error;
+  }
+}
+
 export async function authenticate(credentials: Credentials, signal: AbortSignal, baseUrl?: string): Promise<AuthSession> {
-  const startedAt = Date.now();
-  const data = await request('/auth/login', signal, credentialsRequest(credentials, 'login'), baseUrl);
-  if (!record(data) || typeof data.accessToken !== 'string' || data.accessToken.length > 4096
-    || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(data.accessToken)
-    || data.tokenType !== 'Bearer' || typeof data.expiresIn !== 'number'
-    || !Number.isSafeInteger(data.expiresIn) || data.expiresIn <= 0 || data.expiresIn > 900) throw invalidResponse();
+  const options = credentialsRequest(credentials, 'login');
+  const data = await request('/auth/login', signal, {
+    ...options, headers: { ...options.headers, ...sessionHeaders },
+  }, baseUrl);
+  if (!record(data)) throw invalidResponse();
   const loginUser = parseAuthUser(data.user);
-  const user = parseAuthUser(await request('/auth/me', signal, {
-    headers: { Authorization: `Bearer ${data.accessToken}` },
-  }, baseUrl));
-  const expiresAt = startedAt + data.expiresIn * 1000;
-  if (user.id !== loginUser.id || expiresAt <= Date.now()) throw invalidResponse();
-  // Treat the token as opaque; only the backend verifies its signature and claims.
-  return { user, token: data.accessToken, expiresAt };
+  const session = await restoreSession(signal, baseUrl);
+  if (!session) throw new AuthApiError('Your session is no longer valid. Please sign in again.', 401);
+  if (session.user.id !== loginUser.id || session.expiresAt <= Date.now()) throw invalidResponse();
+  return session;
+}
+
+export async function deleteSession(signal: AbortSignal, baseUrl?: string): Promise<void> {
+  const data = await request('/auth/logout', signal, { method: 'POST', headers: sessionHeaders }, baseUrl);
+  if (data !== null) throw invalidResponse();
 }

@@ -73,7 +73,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
       <div className="max-w-xl lg:pt-4">
         <h1 className="font-display text-[clamp(2.75rem,5vw,4.5rem)] leading-[1.05] tracking-[-0.02em]">{isLogin ? 'A familiar place.' : 'Make yourself at home.'}</h1>
         <p className="mt-6 max-w-md text-base leading-7 text-muted">{isLogin ? 'Welcome back to 10X Shop. Sign in to view your account, then take another look around.' : 'Create a 10X Shop account. A few simple details, and you can return to the collection.'}</p>
-        <p className="mt-8 max-w-sm border-t border-line pt-5 text-sm leading-6 text-muted">Sign-in lasts for this visit. Refreshing or closing the page signs you out; your shopping bag is saved separately.</p>
+        <p className="mt-8 max-w-sm border-t border-line pt-5 text-sm leading-6 text-muted">Your sign-in lasts up to 15 minutes, including if you refresh the page. Your shopping bag is saved separately.</p>
         <Link to="/products" className="text-link mt-6 inline-flex items-center text-sm">Back to the collection</Link>
       </div>
       <div className="min-w-0 border-t border-line pt-8 lg:border-t-0 lg:pt-0">

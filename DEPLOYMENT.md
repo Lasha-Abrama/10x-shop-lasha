@@ -21,7 +21,7 @@ Use Node **24.x** on both hosts and npm **11 or newer**. The installed NestJS 11
 
 | Name | Location | Purpose |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | Vercel frontend, Production scope | Public HTTPS NestJS base URL, without an API path prefix. Rebuild after changes. |
+| `VITE_API_BASE_URL` | Local Vite dev server | Optional proxy target, defaults to `http://localhost:3000`. |
 | `DATABASE_URL` | Render backend secret | Pooled connection for the chosen deployment database. |
 | `DIRECT_URL` | Private migration environment; Render secret only if running migrations there | Direct connection to the **same** branch/database. Not needed by the running API. |
 | `JWT_SECRET` | Render backend secret | Independent production signing key: 64 cryptographically random hexadecimal characters. |
@@ -80,11 +80,11 @@ The existing throttler uses per-process memory and does not trust forwarded head
 | Install command | `npm ci --include=dev` |
 | Build command | `npm run build --workspace frontend` |
 | Output directory | `frontend/dist` |
-| Environment | Only `VITE_API_BASE_URL` for the API connection |
+| API routing | Same-origin `/api/*` rewrite in `vercel.json` |
 
 The root `vercel.json` supplies the documented SPA fallback to `/index.html`, allowing direct requests to `/products/1`, `/account`, `/checkout`, and `/orders/:id` to reach React Router. Vercel checks filesystem routes before rewrites, so existing static assets take precedence over this fallback. This matches the documented Vite SPA configuration; confirm actual assets and deep links on the deployed host. Browser fixtures outside the build output are not deployed. This is a static SPA, not a Vercel-hosted NestJS API.
 
-Choose the stable frontend production domain, configure that exact origin on Render, then set the Render HTTPS API URL in Vercel **before building**. Local `.env.local` is ignored by Git and must not be uploaded. The frontend has a localhost fallback for local use; a missing production setting would therefore break API calls. Check the deployed browser's request destination. A successful Vite build alone does not prove the production URL was set correctly.
+The `/api/:path*` rewrite forwards requests to Render before the SPA fallback. The session cookie is host-only, HttpOnly, Secure in production and SameSite=Strict. If the backend hostname changes, update the rewrite. Verify the deployed login, profile refresh and logout using a disposable test account.
 
 ## Safe release verification and remaining QA
 
@@ -95,7 +95,7 @@ Recorded deployment, health/assets and Lighthouse checks above are complete; the
 3. Refresh direct catalog/detail/cart/login/account/checkout/orders URLs and an unknown route. Confirm React Router recovery rather than a hosting 404, and no fixture output in deployed assets.
 4. Verify guest/protected views and unauthenticated `/auth/me` (`401`) without creating data. Do not repeatedly submit invalid credentials and trigger rate limits during basic connectivity checks. Do not capture tokens or private request bodies in evidence.
 5. Verify proxy/rate-limit behavior, cold/warm startup, database-outage handling and desktop/mobile behavior. Keep native Clear bag keyboard/Escape/confirmation/refresh QA explicit until observed.
-6. Successful registration/order tests require separate approval and a designated disposable account. Never retry an uncertain order automatically; inspect history/database read-only first. JWTs remain memory-only, so refreshing signs the user out while the bag persists. No payment, shipping or stock reservation occurs.
+6. Successful registration/order tests require separate approval and a designated disposable account. Never retry an uncertain order automatically; inspect history/database read-only first. An active session and the bag both survive a page refresh. No payment, shipping or stock reservation occurs.
 7. Record tested public URLs, actual browser matrix and Lighthouse evidence in README/REPORT/REQUIREMENTS. Deployment is live; final QA remains incomplete until the outstanding checks are observed.
 
 ## Local verification for STEP 015A

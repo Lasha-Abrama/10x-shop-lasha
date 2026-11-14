@@ -67,19 +67,22 @@ async function child() {
     return nativeTimeout(handler, ms, ...args);
   }) as typeof window.setTimeout;
   window.clearTimeout = (id: unknown) => { if (id === timerId) deadline = null; nativeClear(id as number | undefined); };
+  let sessionActive = false;
   window.fetch = async (input, options) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
-    if (url.pathname === '/auth/login') return Response.json({ user: authUser, accessToken: 'fixture.payload.signature', tokenType: 'Bearer', expiresIn: 900 });
+    const pathname = url.pathname.replace(/^\/api\//, '/');
+    if (pathname === '/auth/login') { sessionActive = true; return Response.json({ user: authUser }); }
+    if (pathname === '/auth/session') return sessionActive ? Response.json({ user: authUser, expiresAt: Date.now() + 900_000 }) : new Response(null, { status: 401 });
+    if (pathname === '/auth/logout') { sessionActive = false; return new Response(null, { status: 204 }); }
     if (options?.method && options.method !== 'GET') { writes += 1; throw new Error('Unexpected write blocked'); }
-    if (url.pathname === '/auth/me') return Response.json(authUser);
-    if (url.pathname.startsWith('/orders/')) {
+    if (pathname.startsWith('/orders/')) {
       if (orderHeld) await new Promise<void>((resolve) => { releaseOrder = resolve; });
       if (orderError) return Response.json({}, { status: 503 });
-      return missing ? Response.json({}, { status: 404 }) : Response.json(order(url.pathname.endsWith(uuid(2)) ? 2 : 1));
+      return missing ? Response.json({}, { status: 404 }) : Response.json(order(pathname.endsWith(uuid(2)) ? 2 : 1));
     }
-    if (/^\/products\/\d+$/.test(url.pathname)) {
+    if (/^\/products\/\d+$/.test(pathname)) {
       lookups += 1;
-      const id = Number(url.pathname.split('/').at(-1));
+      const id = Number(pathname.split('/').at(-1));
       const selected = mode;
       if (options?.signal) signals.push(options.signal);
       if (selected === 'held') await new Promise<void>((resolve) => releases.push(resolve)); // Deliberately ignores abort.
@@ -87,7 +90,7 @@ async function child() {
       if ((selected === 'partial' && id === 2) || (selected === 'partial-first' && id === 1)) return Response.json({}, { status: 404 });
       return Response.json(product(id, selected === 'stock' ? 3 : 10));
     }
-    throw new Error(`Unexpected fixture GET ${url.pathname}`);
+    throw new Error(`Unexpected fixture GET ${pathname}`);
   };
 
   let cart: CartState = { items: [] };
@@ -132,6 +135,7 @@ async function child() {
   }
   let mount = 0;
   async function render({ signedIn = true, saved = false, path = `/orders/${uuid(1)}` } = {}) {
+    sessionActive = false;
     flushSync(() => root.render(null));
     if (!saved) memory.clear();
     mode = 'ok'; missing = false; orderError = false; authUser = user; lookups = 0; receiptIds.clear(); releases = []; signals.length = 0;

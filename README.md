@@ -55,7 +55,7 @@ Create local files from [frontend/.env.example](frontend/.env.example) and [back
 
 | File / variable | Purpose and safe example |
 | --- | --- |
-| `frontend/.env.local`: `VITE_API_BASE_URL` | Public API base, e.g. `http://localhost:3000`; also the default. Restart Vite after changes; production values are embedded at build time. |
+| `frontend/.env.local`: `VITE_API_BASE_URL` | Public API base, e.g. `http://localhost:3000`; also the default. Restart Vite after changing the local proxy target. |
 | `backend/.env`: `DATABASE_URL` | Private pooled Neon runtime URL from the intended branch/database's Connect dialog. |
 | `backend/.env`: `DIRECT_URL` | Private direct URL to the **same** branch/database for Prisma CLI operations. |
 | `backend/.env`: `JWT_SECRET` | Locally generated random 64-character hexadecimal signing secret; never use the example placeholder. |
@@ -88,7 +88,7 @@ Do not use `db push`, reset/drop commands or a reset prompt to reconcile existin
 
 ## Authentication and checkout behavior
 
-Registration requires a **12–128 Unicode code point password** without whitespace or character-class requirements. Login still accepts previously valid passwords, including passwords with spaces. Emails are normalized; registration assigns `USER` and returns the same neutral acknowledgement for new/existing emails. Passwords use Argon2id. Login verifies `/auth/me` before authenticating the frontend. JWTs expire after 15 minutes and remain **only in React memory**: refresh, a new tab, logout or expiry returns to guest state. Tokens never enter browser storage, cookies or URLs; the saved bag is separate.
+Registration requires a **12–128 Unicode code point password** without whitespace or character-class requirements. Login still accepts previously valid passwords, including passwords with spaces. Emails are normalized; registration assigns `USER` and returns the same neutral acknowledgement for new/existing emails. Passwords use Argon2id. Browser login sets a 15-minute HttpOnly, SameSite cookie. The browser uses the same-origin `/api` proxy, and React loads `/auth/session` on startup to restore the verified profile. Logout clears the cookie. The shopping bag is saved separately.
 
 The bag's versioned localStorage key is `10x-shop.cart.v1`; malformed/unsafe data recovers to an empty bag. Quantities are stock-bounded and totals use validated integer cents. Bag prices/stock are snapshots, not inventory guarantees.
 
@@ -109,11 +109,13 @@ Failed submissions preserve the bag. An uncertain response may hide a completed 
 | API route | Contract |
 | --- | --- |
 | `POST /auth/register` | Email/password only; `202` neutral acknowledgement. |
-| `POST /auth/login` | Email/password only; `200` bearer token, 900-second expiry, public user. |
+| `POST /auth/login` | Email/password; storefront requests set an HttpOnly session cookie. Bearer API clients receive a token. |
+| `GET /auth/session` | Verified session user and expiry. |
+| `POST /auth/logout` | Clears the storefront session cookie. |
 | `GET /auth/me` | Bearer token; safe current user fields. |
-| `POST /orders` | Bearer token; 1–20 distinct product IDs, quantities 1–100; `201` saved order. Unknown fields/duplicates are rejected. |
-| `GET /orders` | Bearer token; current user's latest 50 orders. |
-| `GET /orders/:id` | Bearer token and UUID; ownership enforced, missing/other-user order returns `404`. |
+| `POST /orders` | Session cookie or Bearer token; 1–20 distinct product IDs, quantities 1–100; `201` saved order. Unknown fields/duplicates are rejected. |
+| `GET /orders` | Session cookie or Bearer token; current user's latest 50 orders. |
+| `GET /orders/:id` | Session cookie or Bearer token and UUID; ownership enforced, missing/other-user order returns `404`. |
 
 Protected endpoints reload the user from Prisma; deleted users/stale roles are not trusted. Public responses exclude hashes and user relations. DTO whitelisting, sanitized errors and modest in-memory rate limits protect auth/order writes. Missing/expired auth returns `401`, invalid input `400`, unavailable products/stock `409`, catalog/persistence failures `503`. There is no shared demo login: the assignment's DummyJSON credentials do not authenticate here. Arrange a disposable test account privately with the owner; do not publish passwords or automatically seed live users/orders.
 

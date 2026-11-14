@@ -1,13 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { authenticate, AuthApiError, getApiBaseUrl, parseAuthUser, registerAccount, REGISTRATION_ACK, validateCredentials } from '../src/api/auth.ts';
+import { authenticate, deleteSession, restoreSession, AuthApiError, getApiBaseUrl, parseAuthUser, registerAccount, REGISTRATION_ACK, validateCredentials } from '../src/api/auth.ts';
 import { authReducer, canAccessAccount, initialAuthState } from '../src/auth/state.ts';
 
 const registrationPassword = '🌿'.repeat(12);
 const credentials = { email: ' Shopper@EXAMPLE.com ', password: 'correct horse battery staple' };
 const user = { id: '3381026f-bc0d-466f-bab3-ef735b663c35', email: 'shopper@example.com', role: 'USER', createdAt: '2026-10-21T10:00:00.000Z', updatedAt: '2026-10-21T10:00:00.000Z' };
-const token = 'test.payload.signature';
-const loginResponse = { accessToken: token, tokenType: 'Bearer', expiresIn: 900, user };
 const base = 'http://localhost:3000';
 const signal = () => new AbortController().signal;
 
@@ -56,7 +54,7 @@ test('registration sends normalized credentials only and preserves the neutral d
     calls += 1;
     assert.equal(url, base + '/auth/register');
     assert.equal(options.method, 'POST');
-    assert.equal(options.credentials, 'omit');
+    assert.equal(options.credentials, 'same-origin');
     assert.equal(options.cache, 'no-store');
     assert.equal(options.redirect, 'error');
     assert.equal(options.headers['Content-Type'], 'application/json');
@@ -73,50 +71,52 @@ test('registration never treats an unexpected success message as a confirmed new
   await assert.rejects(registerAccount({ ...credentials, password: registrationPassword }, signal(), base), /unexpected response/);
 });
 
-test('login is confirmed by me before returning a memory session, using only a bearer header', async (context) => {
+test('login verifies the cookie session without exposing the token to React', async (context) => {
   const urls = [];
-  const started = Date.now();
+  const expiresAt = Date.now() + 900_000;
   context.mock.method(globalThis, 'fetch', async (url, options) => {
     urls.push(url);
-    assert.equal(options.credentials, 'omit');
-    assert.ok(options.signal instanceof AbortSignal);
-    if (url.endsWith('/login')) return Response.json(loginResponse);
-    assert.deepEqual(options.headers, { Authorization: `Bearer ${token}` });
-    assert.equal(options.body, undefined);
-    return Response.json({ ...user, role: 'ADMIN', passwordHash: 'not retained' });
+    assert.equal(options.credentials, 'same-origin');
+    assert.equal(options.headers['X-Shop-Session'], 'browser');
+    assert.equal(options.headers.Authorization, undefined);
+    if (url.endsWith('/login')) return Response.json({ user });
+    return Response.json({ user: { ...user, role: 'ADMIN', passwordHash: 'not retained' }, expiresAt });
   });
   const session = await authenticate(credentials, signal(), base);
-  assert.deepEqual(urls, [base + '/auth/login', base + '/auth/me']);
-  assert.equal(session.token, token);
-  assert.equal(session.user.role, 'ADMIN');
-  assert.equal('passwordHash' in session.user, false);
-  assert.ok(session.expiresAt >= started + 900000 && session.expiresAt <= Date.now() + 900000);
+  assert.deepEqual(urls, [base + '/auth/login', base + '/auth/session']);
+  assert.deepEqual(session, { user: { ...user, role: 'ADMIN' }, expiresAt });
 });
 
-test('malformed login responses cannot populate a session or reach me', async (context) => {
-  let response;
+test('restore distinguishes an absent cookie from a failed request and logout requires confirmation', async (context) => {
+  let status = 401;
+  const fetch = context.mock.method(globalThis, 'fetch', async () => Response.json({}, { status }));
+  assert.equal(await restoreSession(signal(), base), null);
+  status = 503;
+  await assert.rejects(restoreSession(signal(), base), { status: 503 });
+  await assert.rejects(deleteSession(signal(), base), { status: 503 });
+  fetch.mock.mockImplementation(async (url, options) => {
+    assert.equal(url, base + '/auth/logout');
+    assert.equal(options.method, 'POST');
+    assert.equal(options.headers['X-Shop-Session'], 'browser');
+    return new Response(null, { status: 204 });
+  });
+  await deleteSession(signal(), base);
+});
+
+test('malformed login or mismatched cookie session cannot authenticate', async (context) => {
+  let data = { user: {} };
   let calls = 0;
-  context.mock.method(globalThis, 'fetch', async () => { calls += 1; return Response.json(response); });
-  const invalid = [null, {}, { ...loginResponse, tokenType: 'Cookie' }, { ...loginResponse, accessToken: 'malformed' },
-    ...[0, -1, 901, 1.5, Infinity].map((expiresIn) => ({ ...loginResponse, expiresIn })),
-    { ...loginResponse, user: {} }];
-  for (response of invalid) await assert.rejects(authenticate(credentials, signal(), base), /unexpected response/);
-  assert.equal(calls, invalid.length);
-});
-
-test('invalid/expired bearer tokens rejected by me never produce an authenticated session', async (context) => {
-  context.mock.method(globalThis, 'fetch', async (url) => url.endsWith('/login')
-    ? Response.json(loginResponse) : Response.json({ message: 'Private server detail' }, { status: 401 }));
-  await assert.rejects(authenticate(credentials, signal(), base), (error) => error instanceof AuthApiError
-    && error.status === 401 && error.message.includes('Please sign in again') && !error.message.includes('Private'));
-});
-
-test('me must return the same user ID as login and a valid public user response', async (context) => {
-  let me;
-  context.mock.method(globalThis, 'fetch', async (url) => Response.json(url.endsWith('/login') ? loginResponse : me));
-  for (me of [{ ...user, id: 'fb1d7a93-2e35-4377-bc1a-287296fca136' }, null, { ...user, role: 'OWNER' }]) {
-    await assert.rejects(authenticate(credentials, signal(), base), /unexpected response/);
-  }
+  context.mock.method(globalThis, 'fetch', async (url) => {
+    calls += 1;
+    return Response.json(url.endsWith('/login') ? data : {
+      user: { ...user, id: 'fb1d7a93-2e35-4377-bc1a-287296fca136' }, expiresAt: Date.now() + 900_000,
+    });
+  });
+  await assert.rejects(authenticate(credentials, signal(), base), /unexpected response/);
+  assert.equal(calls, 1);
+  data = { user };
+  await assert.rejects(authenticate(credentials, signal(), base), /unexpected response/);
+  assert.equal(calls, 3);
 });
 
 test('validation, login, throttling and server errors use safe messages instead of backend details', async (context) => {
@@ -166,7 +166,7 @@ test('timeouts before headers and during JSON have distinct messaging without sw
 test('auth reducer protects guests, handles pending/login/logout, and rejects expired sessions', (context) => {
   let now = 1000;
   context.mock.method(Date, 'now', () => now);
-  const session = { user, token, expiresAt: 2000 };
+  const session = { user, expiresAt: 2000 };
   assert.equal(canAccessAccount(initialAuthState), false);
   const pending = authReducer(initialAuthState, { type: 'begin' });
   assert.equal(pending.status, 'authenticating');
@@ -184,5 +184,5 @@ test('auth reducer protects guests, handles pending/login/logout, and rejects ex
   assert.equal(expired.status, 'guest');
   assert.equal(expired.session, null);
   assert.match(expired.notice, /expired/);
-  assert.equal(initialAuthState.session, null); // A fresh provider always starts as guest.
+  assert.equal(initialAuthState.session, null);
 });

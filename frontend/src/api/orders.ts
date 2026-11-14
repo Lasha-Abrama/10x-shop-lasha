@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from './auth.ts';
+import { getApiBaseUrl, sessionHeaders } from './auth.ts';
 
 export type OrderRequestItem = { productId: number; quantity: number };
 export type OrderItem = OrderRequestItem & { id: string; title: string; unitPriceCents: number; lineTotalCents: number };
@@ -63,16 +63,15 @@ export function validateOrderItems(items: readonly OrderRequestItem[]): void {
   }
 }
 
-async function request(path: string, token: string | null, signal: AbortSignal, body?: string, baseUrl?: string): Promise<unknown> {
-  if (!token) throw new OrderApiError('Please sign in to continue.', 401);
+async function request(path: string, signal: AbortSignal, body?: string, baseUrl?: string): Promise<unknown> {
   const url = `${getApiBaseUrl(baseUrl)}${path}`;
   let response: Response;
   try {
     response = await fetch(url, {
       method: body === undefined ? 'GET' : 'POST',
-      headers: { Authorization: `Bearer ${token}`, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+      headers: { ...sessionHeaders, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
       ...(body === undefined ? {} : { body }),
-      signal: AbortSignal.any([signal, AbortSignal.timeout(20_000)]), credentials: 'omit', cache: 'no-store', redirect: 'error',
+      signal: AbortSignal.any([signal, AbortSignal.timeout(20_000)]), credentials: 'same-origin', cache: 'no-store', redirect: 'error',
     });
   } catch (error: unknown) {
     if (signal.aborted) throw error;
@@ -95,10 +94,10 @@ async function request(path: string, token: string | null, signal: AbortSignal, 
   }
 }
 
-export async function createOrder(items: readonly OrderRequestItem[], token: string | null, signal: AbortSignal, baseUrl?: string): Promise<Order> {
+export async function createOrder(items: readonly OrderRequestItem[], signal: AbortSignal, baseUrl?: string): Promise<Order> {
   validateOrderItems(items);
   const body = JSON.stringify({ items: items.map(({ productId, quantity }) => ({ productId, quantity })) });
-  const data = await request('/orders', token, signal, body, baseUrl);
+  const data = await request('/orders', signal, body, baseUrl);
   try {
     const order = parseOrder(data);
     if (order.items.length !== items.length || !items.every((item) => order.items.some((saved) =>
@@ -107,17 +106,17 @@ export async function createOrder(items: readonly OrderRequestItem[], token: str
   } catch { throw new OrderApiError(invalidResponse().message, undefined, true); }
 }
 
-export async function getOrders(token: string | null, signal: AbortSignal, baseUrl?: string): Promise<Order[]> {
-  const data = await request('/orders', token, signal, undefined, baseUrl);
+export async function getOrders(signal: AbortSignal, baseUrl?: string): Promise<Order[]> {
+  const data = await request('/orders', signal, undefined, baseUrl);
   if (!Array.isArray(data) || data.length > 50) throw invalidResponse();
   const orders = data.map(parseOrder);
   if (new Set(orders.map((order) => order.id)).size !== orders.length) throw invalidResponse();
   return orders;
 }
 
-export async function getOrder(id: string, token: string | null, signal: AbortSignal, baseUrl?: string): Promise<Order> {
+export async function getOrder(id: string, signal: AbortSignal, baseUrl?: string): Promise<Order> {
   if (!isOrderId(id)) throw new OrderApiError('This order could not be found.', 404);
-  const order = parseOrder(await request(`/orders/${id}`, token, signal, undefined, baseUrl));
+  const order = parseOrder(await request(`/orders/${id}`, signal, undefined, baseUrl));
   if (order.id.toLowerCase() !== id.toLowerCase()) throw invalidResponse();
   return order;
 }

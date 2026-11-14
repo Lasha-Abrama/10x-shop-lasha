@@ -42,20 +42,24 @@ async function child() {
   let holdMe = false;
   let releaseMe = () => {};
   let role = 'USER';
+  let sessionExpiresAt = params.get('reload') === 'after' ? Number(sessionStorage.getItem('10x-fixture-session')) : 0;
   window.fetch = async (input, options) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
-    if (url.pathname === '/auth/login') {
+    const pathname = url.pathname.replace(/^\/api\//, '/');
+    if (pathname === '/auth/login') {
       authCalls += 1;
-      return Response.json({ user: { ...user, role }, accessToken: 'fixture.payload.signature', tokenType: 'Bearer', expiresIn: 900 });
+      sessionExpiresAt = now + 900_000;
+      return Response.json({ user: { ...user, role } });
     }
+    if (pathname === '/auth/logout') { sessionExpiresAt = 0; return new Response(null, { status: 204 }); }
     if (options?.method && options.method !== 'GET') { forbiddenWrites += 1; throw new Error('Unexpected write blocked'); }
-    if (url.pathname === '/auth/me') {
+    if (pathname === '/auth/session') {
       if (holdMe) await new Promise<void>((resolve) => { releaseMe = resolve; });
-      return Response.json({ ...user, role });
+      return sessionExpiresAt > now ? Response.json({ user: { ...user, role }, expiresAt: sessionExpiresAt }) : new Response(null, { status: 401 });
     }
     if (url.pathname === '/products/categories') return Response.json([{ slug: 'beauty', name: 'Beauty', url: 'https://dummyjson.com/products/category/beauty' }]);
     if (url.pathname === '/products') return Response.json({ products: [product], total: 1, skip: 0, limit: 12 });
-    if (url.pathname === '/orders') return Response.json([]);
+    if (pathname === '/orders') return Response.json([]);
     throw new Error(`Unexpected fixture request: ${url.pathname}`);
   };
   let cart: CartState = { items: [] };
@@ -102,13 +106,17 @@ async function child() {
     const key = '10x-fixture-profile-reload';
     if (params.get('reload') === 'after') {
       memory.set(CART_STORAGE_KEY, sessionStorage.getItem(key)!); sessionStorage.removeItem(key);
+      sessionStorage.removeItem('10x-fixture-session');
+      await render(path, false, true); await waitFor(details);
+      check(container.textContent?.includes(user.email) && authCalls === 0 && cart.items[0]?.quantity === 2, `${path} refresh restores the cookie session and preserves the cart`);
+      click('main button'); await waitFor(() => route === '/products');
       await render(path, false, true); await waitFor(guest);
-      check(!details() && !container.textContent?.includes(user.email), `${path} refresh removes private account fields`);
-      check(document.querySelector('main a')?.getAttribute('href') === `/login?returnTo=${encodeURIComponent(path)}` && cart.items[0]?.quantity === 2, `${path} refresh preserves safe return and ordinary cart`);
+      check(sessionExpiresAt === 0 && !details(), `${path} stays signed out after logout and remount`);
     } else {
       await render(path); await waitFor(details); flushSync(() => seed());
       await waitFor(() => memory.has(CART_STORAGE_KEY));
       sessionStorage.setItem(key, memory.get(CART_STORAGE_KEY)!); // Fixture-only bridge for isolated cart storage across document reload.
+      sessionStorage.setItem('10x-fixture-session', String(sessionExpiresAt)); // Mock the cookie jar across reload.
       history.replaceState(history.state, '', `/tests/profile.html?width=${width}&reload=after&path=${path.slice(1)}`);
       location.reload(); return;
     }

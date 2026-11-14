@@ -18,13 +18,13 @@ type Submission = { kind: 'ready' } | { kind: 'pending' }
   | { kind: 'error'; message: string; uncertain: boolean } | { kind: 'confirmed'; order: Order; details: CheckoutDetails; thumbnails: ReadonlyMap<number, string> };
 
 export function CheckoutPage() {
-  const { user, accessToken, status } = useAuth();
+  const { user, status } = useAuth();
   if (status === 'authenticating') return <p role="status" className="page-width py-16">Confirming your account…</p>;
-  if (!user || !accessToken) return <Navigate to={authPath('login', '/checkout')} replace />;
-  return <CheckoutSession key={user.id} token={accessToken} />;
+  if (!user) return <Navigate to={authPath('login', '/checkout')} replace />;
+  return <CheckoutSession key={user.id} />;
 }
 
-function CheckoutSession({ token }: { token: string }) {
+function CheckoutSession() {
   const { state: cart, dispatch } = useCart();
   const { invalidateSession, user } = useAuth();
   const [details, setDetails] = useState<CheckoutDetails>({ fullName: '', email: user?.email ?? '', address: '', city: '' });
@@ -67,7 +67,7 @@ function CheckoutSession({ token }: { token: string }) {
     request.current = controller;
     setSubmission({ kind: 'pending' });
     try {
-      await placeCartOrder(cart, token, controller.signal, (order) => {
+      await placeCartOrder(cart, controller.signal, (order) => {
         dispatch({ type: 'clear' });
         setSubmission({ kind: 'confirmed', order, thumbnails: new Map(cart.items.map((item) => [item.id, item.thumbnail])), details: {
           fullName: details.fullName.trim(), email: details.email.trim(), address: details.address.trim(), city: details.city.trim(),

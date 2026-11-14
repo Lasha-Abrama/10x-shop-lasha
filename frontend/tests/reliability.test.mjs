@@ -191,7 +191,7 @@ test('demo timeline labels current, completed and upcoming stages without claimi
   assert.doesNotMatch(future, /aria-current="step"/);
 });
 
-test('real lazy route preserves the shell while pending and resolves to the protected guest view', async () => {
+test('real lazy route preserves the shell while pending and resolves to the session-checking view', async () => {
   const { App } = await server.ssrLoadModule('/src/App.tsx');
   const { AuthProvider } = await server.ssrLoadModule('/src/auth/AuthContext.tsx');
   const { CartProvider } = await server.ssrLoadModule('/src/cart/CartContext.tsx');
@@ -213,6 +213,6 @@ test('real lazy route preserves the shell while pending and resolves to the prot
     });
   });
   assert.doesNotMatch(resolved, /Loading your page/);
-  assert.match(resolved, /Sign in/);
-  assert.match(resolved, /returnTo/);
+  assert.match(resolved, /Confirming your account/);
+  assert.doesNotMatch(resolved, /returnTo/);
 });

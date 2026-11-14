@@ -85,25 +85,28 @@ async function delay(signal: AbortSignal | null | undefined) {
   });
 }
 Object.defineProperty(window, 'localStorage', { value: { getItem: () => null, setItem: () => {}, removeItem: () => {} } });
+let sessionActive = false;
 window.fetch = async (input, options) => {
   const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
-  if (url.pathname === '/auth/login') return Response.json({ user, accessToken: 'mock.payload.signature', tokenType: 'Bearer', expiresIn: 900 });
+  const pathname = url.pathname.replace(/^\/api\//, '/');
+  if (pathname === '/auth/login') { sessionActive = true; return Response.json({ user }); }
+  if (pathname === '/auth/session') return sessionActive ? Response.json({ user, expiresAt: Date.now() + 900_000 }) : new Response(null, { status: 401 });
+  if (pathname === '/auth/logout') { sessionActive = false; return new Response(null, { status: 204 }); }
   if (options?.method === 'POST') throw new Error('Unexpected write blocked by fixture');
-  if (url.pathname === '/auth/me') return Response.json(user);
-  if (url.pathname === '/products/categories') return Response.json([{ slug: 'beauty', name: 'Beauty' }]);
-  if (/^\/products\/[1-9]\d*$/.test(url.pathname)) {
+  if (pathname === '/products/categories') return Response.json([{ slug: 'beauty', name: 'Beauty' }]);
+  if (/^\/products\/[1-9]\d*$/.test(pathname)) {
     if (holdProduct) await new Promise<void>((resolve) => { releaseProduct = resolve; });
     else await delay(options?.signal);
-    return productFailure ? Response.json({}, { status: 503 }) : Response.json({ ...product, id: Number(url.pathname.split('/').at(-1)) });
+    return productFailure ? Response.json({}, { status: 503 }) : Response.json({ ...product, id: Number(pathname.split('/').at(-1)) });
   }
-  if (url.pathname.startsWith('/orders')) {
+  if (pathname.startsWith('/orders')) {
     await delay(options?.signal);
     if (orderFailure) return Response.json({}, { status: 503 });
-    return Response.json(url.pathname === '/orders' ? Array.from({ length: 12 }, (_, i) => ({ ...order, id: uuid(i + 1) })) : order);
+    return Response.json(pathname === '/orders' ? Array.from({ length: 12 }, (_, i) => ({ ...order, id: uuid(i + 1) })) : order);
   }
-  if (url.pathname.startsWith('/products')) {
-    catalogRequests.push(url.pathname);
-    if (url.pathname === '/products/search' && url.searchParams.get('q') === 'pending history') await delay(options?.signal);
+  if (pathname.startsWith('/products')) {
+    catalogRequests.push(pathname);
+    if (pathname === '/products/search' && url.searchParams.get('q') === 'pending history') await delay(options?.signal);
     const skip = Number(url.searchParams.get('skip') ?? 0);
     const limit = url.searchParams.get('limit') === '0' ? catalogTotal : 12;
     return Response.json({ products: Array.from({ length: Math.min(limit, Math.max(0, catalogTotal - skip)) }, (_, i) => ({ ...product, id: skip + i + 1 })), total: catalogTotal, skip, limit });

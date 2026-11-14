@@ -16,12 +16,12 @@ type OrdersState = { kind: 'loading' } | { kind: 'error'; message: string; notFo
 
 export function OrdersPage() {
   const { id } = useParams();
-  const { user, accessToken } = useAuth();
-  if (!user || !accessToken) return <SignInPrompt returnTo={id ? `/orders/${id}` : '/orders'} />;
-  return <UserOrders key={`${user.id}:${id ?? 'list'}`} id={id} token={accessToken} />;
+  const { user } = useAuth();
+  if (!user) return <SignInPrompt returnTo={id ? `/orders/${id}` : '/orders'} />;
+  return <UserOrders key={`${user.id}:${id ?? 'list'}`} id={id} />;
 }
 
-function UserOrders({ id, token }: { id: string | undefined; token: string }) {
+function UserOrders({ id }: { id: string | undefined }) {
   const { invalidateSession } = useAuth();
   const [state, setState] = useState<OrdersState>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
@@ -31,8 +31,8 @@ function UserOrders({ id, token }: { id: string | undefined; token: string }) {
     setState({ kind: 'loading' });
     async function load() {
       try {
-        const next: OrdersState = id ? { kind: 'detail', order: await getOrder(id, token, controller.signal) }
-          : { kind: 'list', orders: await getOrders(token, controller.signal) };
+        const next: OrdersState = id ? { kind: 'detail', order: await getOrder(id, controller.signal) }
+          : { kind: 'list', orders: await getOrders(controller.signal) };
         if (!controller.signal.aborted) setState(next);
       } catch (error: unknown) {
         if (controller.signal.aborted) return;
@@ -43,14 +43,14 @@ function UserOrders({ id, token }: { id: string | undefined; token: string }) {
     }
     void load();
     return () => controller.abort();
-  }, [id, token, attempt, invalidateSession]);
+  }, [id, attempt, invalidateSession]);
 
   return <section className="page-width pb-20 pt-10 lg:pb-28 lg:pt-16">
     <nav aria-label="Breadcrumb" className="mb-9 flex flex-wrap gap-3 text-xs text-muted"><Link className="nav-link" to="/profile">Profile</Link><span aria-hidden="true">/</span>{id ? <><Link className="nav-link" to="/orders">Your orders</Link><span aria-hidden="true">/</span><span aria-current="page">Order details</span></> : <span aria-current="page">Your orders</span>}</nav>
     <div className="mb-10 border-b border-line pb-8"><h1 className="section-title">{id ? 'Your order.' : 'Your orders.'}</h1><p className="mt-5 max-w-xl text-base leading-7 text-muted">{id ? 'The selection and prices recorded for this order.' : 'A record of your selections, with the latest 50 orders shown first.'}</p></div>
     {state.kind === 'loading' && <p data-scroll-pending role="status" className="py-12 text-muted">Loading your {id ? 'order' : 'orders'}…</p>}
     {state.kind === 'error' && <div className="py-6"><h2 className="font-display text-3xl">{state.notFound ? 'Order not found.' : 'A moment out of reach.'}</h2><p role="alert" className="mt-5 max-w-lg text-sm leading-7 text-muted">{state.message}</p><div className="mt-6 flex flex-wrap items-center gap-6">{!state.notFound && <button type="button" className="primary-link" onClick={() => setAttempt((value) => value + 1)}>Try again</button>}<Link className="text-link inline-flex items-center text-sm" to={id ? '/orders' : '/products'}>{id ? 'Back to your orders' : 'Explore the collection'}</Link></div></div>}
-    {state.kind === 'detail' && <><OrderDetails order={state.order} /><ReorderControl key={`${state.order.id}:${token}`} order={state.order} /></>}
+    {state.kind === 'detail' && <><OrderDetails order={state.order} /><ReorderControl key={state.order.id} order={state.order} /></>}
     {state.kind === 'list' && <OrderHistory orders={state.orders} />}
   </section>;
 }

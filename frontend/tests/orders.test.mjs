@@ -6,7 +6,6 @@ import { authPath, safeReturnTo } from '../src/auth/returnTo.ts';
 import { cartReducer } from '../src/cart/cart.ts';
 
 const base = 'http://localhost:3000';
-const token = 'test.payload.signature';
 const signal = () => new AbortController().signal;
 const id = '368fa243-bfd2-4cf6-89de-538a0e899204';
 const itemId = '01a936c3-3fd4-4397-b513-089bf01d6dba';
@@ -56,34 +55,31 @@ test('checkout rejects empty, oversized, duplicate and invalid-quantity bags', (
   for (const price of [Infinity, NaN, -1, 1e308]) assert.ok(checkoutError({ items: [{ ...cart.items[0], price }] }));
 });
 
-test('guest and invalid selections make no order request and cannot clear the bag', async (context) => {
+test('invalid selections make no order request and cannot clear the bag', async (context) => {
   const fetch = context.mock.method(globalThis, 'fetch', async () => { throw new Error('Must not fetch'); });
   let cleared = false;
   const clear = () => { cleared = true; };
-  await assert.rejects(placeCartOrder(cart, null, signal(), clear, base), (error) => error.status === 401);
   for (const invalid of [{ items: [] }, { items: [{ ...cart.items[0], quantity: 101 }] }]) {
-    await assert.rejects(placeCartOrder(invalid, token, signal(), clear, base), (error) => error.status === 400);
+    await assert.rejects(placeCartOrder(invalid, signal(), clear, base), (error) => error.status === 400);
   }
-  await assert.rejects(getOrders(null, signal(), base), (error) => error.status === 401);
-  await assert.rejects(getOrder(id, null, signal(), base), (error) => error.status === 401);
   assert.equal(fetch.mock.callCount(), 0);
   assert.equal(cleared, false);
 });
 
-test('create sends IDs/quantities only with the memory token in a bearer header', async (context) => {
+test('create sends IDs/quantities only with the same-origin cookie', async (context) => {
   context.mock.method(globalThis, 'fetch', async (url, options) => {
     assert.equal(url, base + '/orders');
     assert.equal(options.method, 'POST');
     assert.deepEqual(JSON.parse(options.body), { items });
-    assert.equal(options.headers.Authorization, `Bearer ${token}`);
+    assert.equal(options.headers['X-Shop-Session'], 'browser');
     assert.equal(options.headers['Content-Type'], 'application/json');
-    assert.equal(options.credentials, 'omit');
+    assert.equal(options.credentials, 'same-origin');
     assert.equal(options.cache, 'no-store');
     assert.equal(options.redirect, 'error');
     assert.ok(options.signal instanceof AbortSignal);
     return Response.json(order, { status: 201 });
   });
-  assert.deepEqual(await createOrder([{ ...items[0], price: 0.01, title: 'Untrusted', stock: 100, userId: 'forged' }], token, signal(), base), order);
+  assert.deepEqual(await createOrder([{ ...items[0], price: 0.01, title: 'Untrusted', stock: 100, userId: 'forged' }], signal(), base), order);
 });
 
 test('pending submission does not clear anything; confirmed server totals clear the cart exactly once', async (context) => {
@@ -92,7 +88,7 @@ test('pending submission does not clear anything; confirmed server totals clear 
   let state = structuredClone(cart);
   let calls = 0;
   let confirmation;
-  const submission = placeCartOrder(state, token, signal(), (saved) => {
+  const submission = placeCartOrder(state, signal(), (saved) => {
     calls += 1;
     confirmation = saved;
     state = cartReducer(state, { type: 'clear' });
@@ -113,7 +109,7 @@ test('HTTP errors keep the bag intact and never expose backend diagnostics', asy
   context.mock.method(globalThis, 'fetch', async () => Response.json({ message: 'Private database or upstream detail' }, { status }));
   let confirmed = 0;
   for (status of [400, 401, 404, 409, 429, 500, 503]) {
-    await assert.rejects(placeCartOrder(cart, token, signal(), () => { confirmed += 1; }, base), (error) =>
+    await assert.rejects(placeCartOrder(cart, signal(), () => { confirmed += 1; }, base), (error) =>
       error instanceof OrderApiError && error.status === status && !error.message.includes('Private') && error.uncertain === (status >= 500));
   }
   assert.equal(confirmed, 0);
@@ -132,7 +128,7 @@ test('uncertain POST results are identified without automatic retries or cart cl
   ]) {
     fetch.mock.mockImplementation(implementation);
     const before = fetch.mock.callCount();
-    await assert.rejects(placeCartOrder(cart, token, signal(), () => { confirmed += 1; }, base), (error) =>
+    await assert.rejects(placeCartOrder(cart, signal(), () => { confirmed += 1; }, base), (error) =>
       error instanceof OrderApiError && error.uncertain && !error.message.includes('Private'));
     assert.equal(fetch.mock.callCount() - before, 1);
   }
@@ -162,24 +158,24 @@ test('cancellation before or immediately after response never clears a bag after
     return response;
   });
   let confirmed = 0;
-  await assert.rejects(placeCartOrder(cart, token, controller.signal, () => { confirmed += 1; }, base), { name: 'AbortError' });
+  await assert.rejects(placeCartOrder(cart, controller.signal, () => { confirmed += 1; }, base), { name: 'AbortError' });
   assert.equal(confirmed, 0);
 });
 
-test('listing uses only the bearer identity and supports real, empty and bounded arrays', async (context) => {
+test('listing uses the cookie session and supports real, empty and bounded arrays', async (context) => {
   let response = [order];
   context.mock.method(globalThis, 'fetch', async (url, options) => {
     assert.equal(url, base + '/orders');
     assert.equal(options.method, 'GET');
     assert.equal(options.body, undefined);
-    assert.equal(options.headers.Authorization, `Bearer ${token}`);
+    assert.equal(options.headers['X-Shop-Session'], 'browser');
     return Response.json(response);
   });
-  assert.deepEqual(await getOrders(token, signal(), base), [order]);
+  assert.deepEqual(await getOrders(signal(), base), [order]);
   response = [];
-  assert.deepEqual(await getOrders(token, signal(), base), []);
+  assert.deepEqual(await getOrders(signal(), base), []);
   for (response of [{ orders: [order] }, [order, order], Array(51).fill(order), [null]]) {
-    await assert.rejects(getOrders(token, signal(), base), OrderApiError);
+    await assert.rejects(getOrders(signal(), base), OrderApiError);
   }
 });
 
@@ -192,17 +188,17 @@ test('detail validates UUIDs, matches the returned ID and treats missing/other-u
   });
   for (const invalid of ['1', '../users', 'https://evil.example', '', `${id}?token=secret`]) {
     assert.equal(isOrderId(invalid), false);
-    await assert.rejects(getOrder(invalid, token, signal(), base), (error) => error.status === 404);
+    await assert.rejects(getOrder(invalid, signal(), base), (error) => error.status === 404);
   }
   assert.equal(fetch.mock.callCount(), 0);
-  assert.deepEqual(await getOrder(id, token, signal(), base), order);
+  assert.deepEqual(await getOrder(id, signal(), base), order);
   response = { ...order, id: '8d9acd67-1c60-42b8-83cd-d06449e06db5' };
-  await assert.rejects(getOrder(id, token, signal(), base), /unexpected response/);
+  await assert.rejects(getOrder(id, signal(), base), /unexpected response/);
   status = 404;
   response = { message: 'Not found' };
-  await assert.rejects(getOrder(id, token, signal(), base), (error) => error.status === 404 && /not available for your account/.test(error.message));
+  await assert.rejects(getOrder(id, signal(), base), (error) => error.status === 404 && /not available for your account/.test(error.message));
   status = 401;
-  await assert.rejects(getOrders(token, signal(), base), (error) => error.status === 401 && /session has ended/.test(error.message));
+  await assert.rejects(getOrders(signal(), base), (error) => error.status === 401 && /session has ended/.test(error.message));
 });
 
 test('profile returns accept only the exact internal route', () => {

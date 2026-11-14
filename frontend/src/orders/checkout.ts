@@ -13,11 +13,11 @@ export function checkoutError(cart: CartState): string | null {
 }
 
 // Clear only after a validated server confirmation; aborted or uncertain requests leave the bag intact.
-export async function placeCartOrder(cart: CartState, token: string | null, signal: AbortSignal,
+export async function placeCartOrder(cart: CartState, signal: AbortSignal,
   onConfirmed: (order: Order) => void, baseUrl?: string): Promise<void> {
   const error = checkoutError(cart);
   if (error) throw new OrderApiError(error, 400);
-  const order = await createOrder(cart.items.map((item) => ({ productId: item.id, quantity: item.quantity })), token, signal, baseUrl);
+  const order = await createOrder(cart.items.map((item) => ({ productId: item.id, quantity: item.quantity })), signal, baseUrl);
   signal.throwIfAborted();
   onConfirmed(order);
 }

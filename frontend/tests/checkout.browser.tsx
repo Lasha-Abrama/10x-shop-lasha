@@ -35,21 +35,24 @@ const registrations: unknown[] = [];
 let detailRequests = 0;
 let payload: unknown;
 // No request falls through to the real backend or catalog.
+let sessionActive = false;
 window.fetch = async (input, options) => {
   const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
-  if (url.pathname === '/auth/login') return Response.json({ user, accessToken: 'fixture.payload.signature', tokenType: 'Bearer', expiresIn: 900 });
-  if (url.pathname === '/auth/register') {
+  const pathname = url.pathname.replace(/^\/api\//, '/');
+  if (pathname === '/auth/login') { sessionActive = true; return Response.json({ user }); }
+  if (pathname === '/auth/session') return sessionActive ? Response.json({ user, expiresAt: Date.now() + 900_000 }) : new Response(null, { status: 401 });
+  if (pathname === '/auth/logout') { sessionActive = false; return new Response(null, { status: 204 }); }
+  if (pathname === '/auth/register') {
     registrations.push(JSON.parse(String(options?.body)));
     return Response.json({ message: 'Registration request processed. You can try signing in.' }, { status: 202 });
   }
-  if (url.pathname === '/auth/me') return Response.json(user);
-  if (url.pathname === '/products/1') {
+  if (pathname === '/products/1') {
     detailRequests += 1;
     await new Promise((resolve) => setTimeout(resolve, 100));
     if (detailFailure) throw new TypeError('Fixture offline');
     return Response.json({ ...product, stock });
   }
-  if (url.pathname === '/orders' && options?.method === 'POST') {
+  if (pathname === '/orders' && options?.method === 'POST') {
     orderRequests += 1;
     payload = JSON.parse(String(options.body));
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -103,6 +106,7 @@ function Setup({ signedIn, filled, children }: { signedIn: boolean; filled: bool
 }
 let fixture = 0;
 function render(signedIn = true, filled = true, path = '/checkout') {
+  sessionActive = false;
   memory.clear();
   flushSync(() => root.render(<MemoryRouter key={++fixture} initialEntries={[path]}><AuthProvider><CartProvider>
     <Setup signedIn={signedIn} filled={filled}><Probe /><Routes><Route element={<Layout />}>

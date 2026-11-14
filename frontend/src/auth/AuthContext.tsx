@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useReducer, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { authenticate, registerAccount } from '../api/auth';
+import { authenticate, deleteSession, registerAccount, restoreSession } from '../api/auth';
 import type { AuthUser, Credentials } from '../api/auth';
 import { authReducer, canAccessAccount, initialAuthState } from './state';
 import type { AuthState } from './state';
@@ -9,11 +9,10 @@ type AuthContextValue = {
   user: AuthUser | null;
   status: AuthState['status'];
   notice: string | null;
-  accessToken: string | null;
   invalidateSession: () => void;
   login: (credentials: Credentials, signal: AbortSignal) => Promise<void>;
   register: (credentials: Credentials, signal: AbortSignal) => Promise<string>;
-  logout: () => void;
+  logout: () => Promise<boolean>;
 };
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -21,7 +20,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialAuthState);
   const active = useRef<AbortController | null>(null);
 
-  useEffect(() => () => active.current?.abort(), []);
+  // Refresh-ის შემდეგ cookie ავტომატურად მიჰყვება მოთხოვნას, React კი მომხმარებლის მონაცემებს თავიდან ტვირთავს.
+  useEffect(() => {
+    if (active.current && !active.current.signal.aborted) return () => active.current?.abort();
+    const controller = new AbortController();
+    active.current = controller;
+    void restoreSession(controller.signal).then((session) => {
+      if (active.current !== controller || controller.signal.aborted) return;
+      dispatch(session ? { type: 'authenticated', session } : { type: 'guest' });
+    }).catch(() => {
+      if (active.current === controller && !controller.signal.aborted) {
+        dispatch({ type: 'guest', notice: 'We couldn’t restore your session. Refresh to retry or sign in again.' });
+      }
+    }).finally(() => {
+      if (active.current === controller) active.current = null;
+    });
+    return () => active.current?.abort();
+  }, []);
   useEffect(() => {
     if (state.status !== 'authenticated') return;
     function expireIfNeeded() {
@@ -57,13 +72,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     active.current = null;
     dispatch({ type: 'guest', notice });
   }, []);
-  const logout = useCallback(() => endSession('You have signed out.'), [endSession]);
+  async function logout(): Promise<boolean> {
+    if (active.current) return false;
+    const controller = new AbortController();
+    active.current = controller;
+    try {
+      await deleteSession(controller.signal);
+      if (controller.signal.aborted) return false;
+      endSession('You have signed out.');
+      return true;
+    } finally {
+      if (active.current === controller) active.current = null;
+    }
+  }
   const invalidateSession = useCallback(() => endSession('Your session has ended. Please sign in again.'), [endSession]);
 
   return <AuthContext.Provider value={{
     user: canAccessAccount(state) ? state.session?.user ?? null : null,
     status: state.status === 'authenticated' && !canAccessAccount(state) ? 'guest' : state.status, notice: state.notice,
-    accessToken: canAccessAccount(state) ? state.session?.token ?? null : null,
     login, logout, invalidateSession, register: registerAccount,
   }}>{children}</AuthContext.Provider>;
 }

@@ -23,7 +23,7 @@ async function fixture(context, frontendOrigin = origin) {
   const users = new Map();
   const calls = { create: [], find: [] };
   const failure = { create: false, find: false };
-  const prisma = { user: {
+  const prisma = { order: { findMany: async () => [] }, user: {
     create: async (args) => {
       calls.create.push(args);
       if (failure.create) throw new Error('Private database diagnostic must not escape');
@@ -321,4 +321,29 @@ test('public HTTPS CORS allows only the configured origin, including bearer pref
   assert.equal(preflight.status, 204);
   assert.equal(preflight.headers.get('access-control-allow-origin'), hosted);
   assert.match(preflight.headers.get('access-control-allow-headers'), /Authorization/);
+});
+
+test('storefront cookie restores a session and clears on logout', async (context) => {
+  const api = await fixture(context);
+  await api.request('/auth/register', { body: credentials });
+  const browser = { 'X-Shop-Session': 'browser' };
+  const login = await api.request('/auth/login', { headers: browser, body: credentials });
+  assert.equal(login.status, 200);
+  assert.deepEqual(Object.keys(login.body), ['user']);
+  const cookie = login.headers.get('set-cookie');
+  assert.match(cookie, /HttpOnly; SameSite=Strict/);
+  assert.match(cookie, /Max-Age=900/);
+  const headers = { ...browser, Cookie: cookie.split(';')[0] };
+  assert.equal((await api.request('/auth/session', { headers: { Cookie: headers.Cookie } })).status, 401);
+  const restored = await api.request('/auth/session', { headers });
+  assert.equal(restored.status, 200);
+  assert.deepEqual(restored.body.user, login.body.user);
+  assert.ok(restored.body.expiresAt > Date.now());
+  const orders = await api.request('/orders', { headers });
+  assert.equal(orders.status, 200);
+  assert.equal((await api.request('/auth/logout', { headers: { Cookie: headers.Cookie }, method: 'POST' })).status, 403);
+  const logout = await api.request('/auth/logout', { headers, method: 'POST' });
+  assert.equal(logout.status, 204);
+  assert.match(logout.headers.get('set-cookie'), /Max-Age=0/);
+  assert.equal((await api.request('/auth/session', { headers: browser })).status, 401);
 });

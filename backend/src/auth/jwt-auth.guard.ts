@@ -5,7 +5,12 @@ import { AuthService } from './auth.service';
 import type { PublicUser } from './auth.service';
 import { JWT_AUDIENCE, JWT_ISSUER } from './auth.config';
 
-export type AuthRequest = { headers: { authorization?: string }; user?: PublicUser };
+export const SESSION_COOKIE = process.env.NODE_ENV === 'production' ? '__Host-shop-session' : 'shop-session';
+export type AuthRequest = {
+  headers: { authorization?: string; cookie?: string; 'x-shop-session'?: string };
+  user?: PublicUser;
+  expiresAt?: number;
+};
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -13,7 +18,11 @@ export class JwtAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthRequest>();
-    const header = request.headers.authorization;
+    // Cookie requests require a custom header. CORS does not allow it cross-origin.
+    const cookie = request.headers['x-shop-session'] === 'browser'
+      ? request.headers.cookie?.split(';').find((entry) => entry.trim().startsWith(`${SESSION_COOKIE}=`))?.trim().slice(SESSION_COOKIE.length + 1)
+      : undefined;
+    const header = request.headers.authorization ?? (cookie ? `Bearer ${cookie}` : undefined);
     if (typeof header !== 'string' || header.length > 4096) throw new UnauthorizedException('Unauthorized');
     const match = /^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/i.exec(header);
     if (!match) throw new UnauthorizedException('Unauthorized');
@@ -28,6 +37,7 @@ export class JwtAuthGuard implements CanActivate {
         throw new Error('Invalid token claims');
       }
       userId = claims.sub;
+      request.expiresAt = claims.exp * 1000;
     } catch { throw new UnauthorizedException('Unauthorized'); }
     // The database is authoritative: deleted users and stale role claims are not trusted.
     request.user = await this.auth.currentUser(userId);
